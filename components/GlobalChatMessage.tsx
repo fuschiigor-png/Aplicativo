@@ -17,21 +17,21 @@ const GlobalChatMessage: React.FC<GlobalChatMessageProps> = ({ message, currentU
 
     const containerClasses = isCurrentUser ? 'justify-end' : 'justify-start';
     const bubbleClasses = isCurrentUser
-        ? 'bg-blue-600 rounded-br-none'
-        : 'bg-gray-700 rounded-bl-none';
+        ? 'bg-sky-600 text-white rounded-br-none'
+        : 'bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-bl-none';
 
     return (
         <div className={`flex items-end gap-3 ${containerClasses}`}>
             <div className={`flex flex-col ${isCurrentUser ? 'items-end' : 'items-start'}`}>
                 {!isCurrentUser && (
-                    <span className="text-xs text-gray-400 mb-1 px-2">{userEmail}</span>
+                    <span className="text-xs text-slate-500 dark:text-slate-400 mb-1 px-2">{userEmail}</span>
                 )}
                 <div
                     className={`max-w-md lg:max-w-lg xl:max-w-2xl px-4 py-3 rounded-2xl shadow-md ${bubbleClasses}`}
                 >
-                    <p className="text-white whitespace-pre-wrap">{text}</p>
+                    <p className="text-inherit whitespace-pre-wrap">{text}</p>
                 </div>
-                <span className="text-xs text-gray-500 mt-1 px-2">{formattedTime}</span>
+                <span className="text-xs text-slate-400 dark:text-slate-500 mt-1 px-2">{formattedTime}</span>
             </div>
         </div>
     );

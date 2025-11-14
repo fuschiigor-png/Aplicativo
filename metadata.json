@@ -1,5 +1,5 @@
 {
-  "name": "Catálogo de Máquinas de Bordado",
-  "description": "Um aplicativo para visualizar preços e modelos de máquinas de bordado, com um assistente de IA e chat global.",
+  "name": "Lista de preços Barudan do Brasil",
+  "description": "Um aplicativo para visualizar preços e modelos de máquinas de bordado Barudan, com um assistente de IA e chat.",
   "requestFramePermissions": []
 }

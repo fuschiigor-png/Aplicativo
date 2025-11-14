@@ -1,4 +1,3 @@
-
 import React, { useState, KeyboardEvent } from 'react';
 
 interface ChatInputProps {
@@ -32,13 +31,13 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, onSendCuriosity, i
   };
 
   return (
-    <div className="bg-gray-800/70 backdrop-blur-sm p-3 md:p-4 border-t border-blue-800/50">
+    <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm p-3 md:p-4 border-t border-slate-200 dark:border-sky-900/50">
       <form onSubmit={handleSubmit} className="max-w-4xl mx-auto flex items-center gap-3">
         <button
           type="button"
           onClick={handleCuriosityClick}
           disabled={isLoading}
-          className="w-12 h-12 bg-gray-700 rounded-full flex items-center justify-center text-yellow-300 hover:bg-gray-600 disabled:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 transform hover:scale-110 active:scale-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-yellow-400"
+          className="w-12 h-12 bg-slate-200 dark:bg-slate-700 rounded-full flex items-center justify-center text-yellow-500 dark:text-yellow-400 hover:bg-slate-300 dark:hover:bg-slate-600 disabled:bg-slate-100 dark:disabled:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 transform hover:scale-110 active:scale-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-slate-800 focus:ring-yellow-400"
           aria-label="Pedir uma curiosidade aleatória"
         >
           <svg 
@@ -58,13 +57,13 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, onSendCuriosity, i
           placeholder="Pergunte algo..."
           disabled={isLoading}
           rows={1}
-          className="flex-1 bg-gray-700/80 border border-gray-600 rounded-full py-3 px-5 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none transition-all duration-200 disabled:opacity-50"
+          className="flex-1 bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-full py-3 px-5 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent resize-none transition-all duration-200 disabled:opacity-50"
           aria-label="Caixa de mensagem"
         />
         <button
           type="submit"
           disabled={isLoading || !inputText.trim()}
-          className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center text-white hover:bg-blue-500 disabled:bg-gray-600 disabled:cursor-not-allowed transition-all duration-200 transform hover:scale-110 active:scale-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-blue-500"
+          className="w-12 h-12 bg-sky-600 rounded-full flex items-center justify-center text-white hover:bg-sky-500 disabled:bg-slate-400 dark:disabled:bg-slate-600 disabled:cursor-not-allowed transition-all duration-200 transform hover:scale-110 active:scale-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-slate-800 focus:ring-sky-500"
           aria-label="Enviar mensagem"
         >
           <svg

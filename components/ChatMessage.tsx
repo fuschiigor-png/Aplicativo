@@ -1,10 +1,9 @@
-
 import React from 'react';
 import { Message, MessageSender } from '../types';
 
 const UserIcon: React.FC = () => (
   <svg
-    className="w-full h-full text-blue-300"
+    className="w-full h-full text-white"
     fill="currentColor"
     viewBox="0 0 24 24"
     xmlns="http://www.w3.org/2000/svg"
@@ -15,7 +14,7 @@ const UserIcon: React.FC = () => (
 
 const AIIcon: React.FC = () => (
   <svg
-    className="w-full h-full text-blue-300"
+    className="w-full h-full text-sky-600 dark:text-sky-400"
     fill="currentColor"
     viewBox="0 0 24 24"
     xmlns="http://www.w3.org/2000/svg"
@@ -43,14 +42,19 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
   const { sender, text } = message;
 
   const isUser = sender === MessageSender.USER;
-  const isAI = sender === MessageSender.AI;
   const isError = sender === MessageSender.ERROR;
 
   const containerClasses = isUser ? 'justify-end' : 'justify-start';
   const bubbleClasses = isUser
-    ? 'bg-blue-600 rounded-br-none'
-    : isError ? 'bg-red-800/80 rounded-bl-none' : 'bg-gray-700 rounded-bl-none';
-  const iconBgClass = isUser ? 'bg-blue-800' : isError ? 'bg-red-900' : 'bg-gray-800';
+    ? 'bg-sky-600 text-white rounded-br-none'
+    : isError 
+    ? 'bg-red-200 dark:bg-red-800/80 text-red-900 dark:text-red-100 rounded-bl-none' 
+    : 'bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-bl-none';
+  const iconBgClass = isUser 
+    ? 'bg-sky-700' 
+    : isError 
+    ? 'bg-red-100 dark:bg-red-900' 
+    : 'bg-slate-200 dark:bg-slate-800';
   
   const Icon = isUser ? UserIcon : isError ? ErrorIcon : AIIcon;
 
@@ -64,7 +68,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
       <div
         className={`max-w-md lg:max-w-lg xl:max-w-2xl px-4 py-3 rounded-2xl shadow-md transition-all duration-300 ${bubbleClasses}`}
       >
-        <p className="text-white whitespace-pre-wrap">{text}</p>
+        <p className="whitespace-pre-wrap">{text}</p>
       </div>
       {isUser && (
          <div className={`w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center p-2 ${iconBgClass}`}>
