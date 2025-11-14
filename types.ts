@@ -23,3 +23,14 @@ export interface Message {
   sender: MessageSender;
   text: string;
 }
+
+export interface GlobalChatMessage {
+  id: string;
+  text: string;
+  createdAt: { // Firestore Timestamp structure
+    seconds: number;
+    nanoseconds: number;
+  };
+  userId: string;
+  userEmail: string;
+}
