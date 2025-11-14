@@ -20,3 +20,13 @@ export interface GlobalChatMessage {
   userId: string;
   userEmail: string;
 }
+
+export interface ExchangeRateHistoryEntry {
+  id: string;
+  rate: number;
+  updatedBy: string; // user email
+  updatedAt: {
+    seconds: number;
+    nanoseconds: number;
+  } | null;
+}

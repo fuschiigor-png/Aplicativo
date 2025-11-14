@@ -2,12 +2,12 @@ import React, { useState, useEffect, useRef, FormEvent } from 'react';
 import { User } from 'firebase/auth';
 import LoginPage from './components/LoginPage';
 import { onAuthStateChangedListener, handleSignOut } from './services/authService';
-import { Message, MessageSender, GlobalChatMessage as GlobalChatMessageType } from './types';
+import { Message, MessageSender, GlobalChatMessage as GlobalChatMessageType, ExchangeRateHistoryEntry } from './types';
 import ChatInput from './components/ChatInput';
 import ChatMessage from './components/ChatMessage';
 import GlobalChatMessage from './components/GlobalChatMessage';
-import { generateChatResponse } from './services/geminiService';
-import { getMessagesListener, sendGlobalMessage } from './services/chatService';
+import { generateChatResponse, getExchangeRate } from './services/geminiService';
+import { getMessagesListener, sendGlobalMessage, getExchangeRateConfigListener, getExchangeRateHistoryListener, updateExchangeRateConfig } from './services/chatService';
 
 
 // Main App component: Manages authentication state and view routing
@@ -35,10 +35,40 @@ const App: React.FC = () => {
 };
 
 // MainDashboard: Handles navigation between Home, Chat, and other views
-type View = 'home' | 'types' | 'models' | 'chat' | 'global-chat';
+type View = 'home' | 'types' | 'models' | 'chat' | 'global-chat' | 'exchange-rate';
 
 const MainDashboard: React.FC<{ user: User }> = ({ user }) => {
   const [view, setView] = useState<View>('home');
+  const [referenceRate, setReferenceRate] = useState<number | null>(null);
+  const [exchangeRateHistory, setExchangeRateHistory] = useState<ExchangeRateHistoryEntry[]>([]);
+
+  useEffect(() => {
+    const unsubscribeConfig = getExchangeRateConfigListener((config) => {
+        setReferenceRate(config ? config.currentRate : null);
+    });
+
+    const unsubscribeHistory = getExchangeRateHistoryListener((history) => {
+        setExchangeRateHistory(history);
+    });
+
+    return () => {
+        unsubscribeConfig();
+        unsubscribeHistory();
+    };
+  }, []);
+
+  const handleUpdateReferenceRate = async (newRate: number) => {
+    if (user.email) {
+        try {
+            await updateExchangeRateConfig(newRate, user.email);
+        } catch (error) {
+            console.error("Failed to update reference rate:", error);
+            throw error;
+        }
+    } else {
+        throw new Error("Usuário não tem e-mail para registrar a alteração.");
+    }
+  };
 
   const goToHome = () => setView('home');
 
@@ -46,9 +76,10 @@ const MainDashboard: React.FC<{ user: User }> = ({ user }) => {
     <div className="flex flex-col h-screen bg-gradient-to-br from-gray-900 via-slate-800 to-blue-900 text-white font-sans">
       {view === 'home' && <HomePage user={user} setView={setView} />}
       {view === 'types' && <MachineTypesPage user={user} goToHome={goToHome} />}
-      {view === 'models' && <MachineModelsPage user={user} goToHome={goToHome} />}
+      {view === 'models' && <MachineModelsPage user={user} goToHome={goToHome} referenceRate={referenceRate} />}
       {view === 'chat' && <ChatPage user={user} goToHome={goToHome} />}
       {view === 'global-chat' && <GlobalChatPage user={user} goToHome={goToHome} />}
+      {view === 'exchange-rate' && <ExchangeRatePage user={user} goToHome={goToHome} savedReferenceRate={referenceRate} history={exchangeRateHistory} onUpdateReferenceRate={handleUpdateReferenceRate} />}
     </div>
   );
 };
@@ -94,6 +125,20 @@ const AppHeader: React.FC<{
   );
 };
 
+
+// Reusable HomeCard component
+const HomeCard: React.FC<{
+    onClick: () => void;
+    title: string;
+    description: string;
+}> = ({ onClick, title, description }) => (
+    <div onClick={onClick} className="bg-gray-800/60 backdrop-blur-sm p-8 rounded-2xl shadow-lg border border-blue-800/30 cursor-pointer hover:bg-gray-700/80 hover:border-blue-600 transition-all duration-300 text-center w-full sm:w-80 flex flex-col justify-center">
+        <h3 className="text-2xl font-semibold text-blue-200 mb-2">{title}</h3>
+        <p className="text-gray-400">{description}</p>
+    </div>
+);
+
+
 // HomePage: The main landing page after login
 const HomePage: React.FC<{ user: User; setView: (view: View) => void }> = ({ user, setView }) => {
   return (
@@ -102,28 +147,18 @@ const HomePage: React.FC<{ user: User; setView: (view: View) => void }> = ({ use
       <main className="flex flex-col items-center justify-center flex-1 p-6">
         <h2 className="text-4xl font-bold text-white mb-4">Bem-vindo!</h2>
         <p className="text-lg text-gray-300 mb-12">Explore nosso catálogo ou converse com nosso assistente.</p>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-4xl">
-          <div onClick={() => setView('types')} className="bg-gray-800/60 backdrop-blur-sm p-8 rounded-2xl shadow-lg border border-blue-800/30 cursor-pointer hover:bg-gray-700/80 hover:border-blue-600 transition-all duration-300 text-center">
-            <h3 className="text-2xl font-semibold text-blue-200 mb-2">Tipos de Máquinas</h3>
-            <p className="text-gray-400">Navegue pelas categorias de máquinas.</p>
-          </div>
-          <div onClick={() => setView('models')} className="bg-gray-800/60 backdrop-blur-sm p-8 rounded-2xl shadow-lg border border-blue-800/30 cursor-pointer hover:bg-gray-700/80 hover:border-blue-600 transition-all duration-300 text-center">
-            <h3 className="text-2xl font-semibold text-blue-200 mb-2">Modelos e Preços</h3>
-            <p className="text-gray-400">Veja todos os modelos disponíveis.</p>
-          </div>
-          <div onClick={() => setView('chat')} className="bg-gray-800/60 backdrop-blur-sm p-8 rounded-2xl shadow-lg border border-blue-800/30 cursor-pointer hover:bg-gray-700/80 hover:border-blue-600 transition-all duration-300 text-center">
-            <h3 className="text-2xl font-semibold text-blue-200 mb-2">Assistente de Chat</h3>
-            <p className="text-gray-400">Tire suas dúvidas sobre bordados com a IA.</p>
-          </div>
-          <div onClick={() => setView('global-chat')} className="bg-gray-800/60 backdrop-blur-sm p-8 rounded-2xl shadow-lg border border-blue-800/30 cursor-pointer hover:bg-gray-700/80 hover:border-blue-600 transition-all duration-300 text-center">
-            <h3 className="text-2xl font-semibold text-blue-200 mb-2">Bate-papo Global</h3>
-            <p className="text-gray-400">Converse com outros entusiastas.</p>
-          </div>
+        <div className="flex flex-wrap justify-center gap-8 w-full max-w-5xl">
+            <HomeCard onClick={() => setView('types')} title="Tipos de Máquinas" description="Navegue pelas categorias de máquinas." />
+            <HomeCard onClick={() => setView('models')} title="Modelos e Preços" description="Veja todos os modelos disponíveis." />
+            <HomeCard onClick={() => setView('chat')} title="Assistente de Chat" description="Tire suas dúvidas sobre bordados com a IA." />
+            <HomeCard onClick={() => setView('global-chat')} title="Bate-papo Global" description="Converse com outros entusiastas." />
+            <HomeCard onClick={() => setView('exchange-rate')} title="Taxa JPY/BRL" description="Consulte e defina a cotação do Iene." />
         </div>
       </main>
     </>
   );
 };
+
 
 // MachineTypesPage: Displays categories of embroidery machines
 const MachineTypesPage: React.FC<{ user: User; goToHome: () => void }> = ({ user, goToHome }) => {
@@ -151,34 +186,268 @@ const MachineTypesPage: React.FC<{ user: User; goToHome: () => void }> = ({ user
     );
 };
 
-// MachineModelsPage: Displays specific models and prices
-const MachineModelsPage: React.FC<{ user: User; goToHome: () => void }> = ({ user, goToHome }) => {
-    const machineModels = [
-        { name: 'Brother PE535', type: 'Doméstica', price: 'R$ 2.800,00', description: 'Ótima para iniciantes, com área de bordado de 10x10cm e 80 designs inclusos.' },
-        { name: 'Singer EM200', type: 'Doméstica', price: 'R$ 3.200,00', description: 'Possui 200 designs de bordado e 6 opções de fontes, com área de 26x15cm.' },
-        { name: 'Janome MC500E', type: 'Semi-industrial', price: 'R$ 8.500,00', description: 'Área de bordado de 28x20cm, velocidade de até 860 ppm e tela de toque colorida.' },
-        { name: 'Brother PR680W', type: 'Industrial', price: 'R$ 45.000,00', description: 'Máquina de 6 agulhas, ideal para produção, com conexão wireless e câmera de posicionamento.' },
-        { name: 'Elna eXpressive 830', type: 'Semi-industrial', price: 'R$ 12.000,00', description: 'Ampla área de trabalho e braço livre para bordar em peças fechadas.' },
-    ];
+// Data for machine models, organized by product type
+const machineData: Record<string, { name: string; type: string; price: string; description: string; jpyPrice?: number }[]> = {
+  '01 Cabeça': [
+    { 
+      name: 'BEKT-S1501CA II', 
+      type: 'Industrial (Elite Jr)', 
+      price: 'Consulte-nos', 
+      jpyPrice: 2560000,
+      description: 'Máquina de um cabeçote com 15 agulhas, ideal para peças fechadas e bonés prontos.\n\n• Velocidade Máxima: 1.200 PPM\n• Área de Bordado: 250x400mm\n• Valor de Referência: ¥2.560.000 (Iene)\n• O valor em Reais é calculado com base na cotação do dia da importação.' 
+    },
+    { name: 'BEKT-S1501CBIII', type: 'Industrial', price: 'Consulte', description: 'Modelo padrão com alta velocidade e precisão para diversos materiais.' },
+    { name: 'BEKT-S1501CBIII (B32)', type: 'Industrial', price: 'Consulte', description: 'Versão com bastidor para bonés, otimizada para acessórios.' },
+    { name: 'BEKT-S1501CBIII (B33)', type: 'Industrial', price: 'Consulte', description: 'Inclui conjunto de bastidores cilíndricos para mangas e calças.' },
+    { name: 'BEKT-S1501CBIII (B42)', type: 'Industrial', price: 'Consulte', description: 'Equipada com bastidor de bonés largo para designs maiores.' },
+    { name: 'BEKT-S1501CBIII (B43)', type: 'Industrial', price: 'Consulte', description: 'Pacote completo com bastidores cilíndricos e para bonés.' },
+    { name: 'BEKT-S1501CBIII - Campo Estendido', type: 'Industrial', price: 'Consulte', description: 'Área de bordado ampliada para peças grandes como jaquetas e banners.' },
+  ],
+  '02 Cabeças': [
+      { name: 'Modelo 2C-A', type: 'Industrial', price: 'R$ 25.000,00', description: 'Máquina de 2 cabeças para pequenas produções.' },
+      { name: 'Modelo 2C-B', type: 'Industrial', price: 'R$ 28.500,00', description: 'Modelo avançado de 2 cabeças com painel touch.' },
+  ],
+  '04 Cabeças': [
+      { name: 'Modelo 4C-Pro', type: 'Industrial', price: 'R$ 38.000,00', description: 'Alta velocidade e eficiência para produções médias.' },
+  ],
+  '06 Cabeças': [
+    { name: 'Brother PR680W', type: 'Industrial', price: 'R$ 45.000,00', description: 'Máquina de 6 agulhas, ideal para produção, com conexão wireless e câmera de posicionamento.' },
+  ],
+  '08 Cabeças': [
+     { name: 'Modelo 8C-Max', type: 'Industrial', price: 'R$ 65.000,00', description: 'Para grandes volumes de produção, robusta e confiável.' },
+  ],
+  '12 Cabeças': [
+     { name: 'Modelo 12C-Ultra', type: 'Industrial', price: 'R$ 90.000,00', description: 'Performance máxima para a indústria de bordados.' },
+  ],
+  'Drop-Table': [
+      { name: 'Mesa de Lantejoula DT-100', type: 'Acessório', price: 'R$ 15.000,00', description: 'Dispositivo para aplicação de lantejoulas em máquinas de mesa.' },
+  ],
+  'Acessórios': [
+      { name: 'Kit de Agulhas Groz-Beckert', type: 'Consumível', price: 'R$ 150,00', description: 'Caixa com 100 agulhas de alta qualidade para diversos tecidos.' },
+      { name: 'Bastidor Magnético 15x15cm', type: 'Acessório', price: 'R$ 450,00', description: 'Facilita a fixação de tecidos difíceis.' },
+  ]
+};
+
+const productTypes = Object.keys(machineData);
+
+// MachineModelsPage: Displays specific models and prices with interactive selectors
+const MachineModelsPage: React.FC<{ user: User; goToHome: () => void; referenceRate: number | null }> = ({ user, goToHome, referenceRate }) => {
+    const [selectedProduct, setSelectedProduct] = useState<string>('');
+    const [selectedModelName, setSelectedModelName] = useState<string>('');
+    
+    const handleProductChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        setSelectedProduct(e.target.value);
+        setSelectedModelName(''); // Reset model selection when product changes
+    };
+
+    const handleModelChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        setSelectedModelName(e.target.value);
+    };
+
+    const modelsForSelectedProduct = selectedProduct ? machineData[selectedProduct] : [];
+    const selectedModelDetails = selectedModelName ? modelsForSelectedProduct.find(m => m.name === selectedModelName) : null;
+
+    let calculatedPrice = selectedModelDetails?.price;
+    let priceColor = 'text-green-300';
+    let priceBg = 'bg-green-900/50';
+
+    if (selectedModelDetails?.jpyPrice && referenceRate !== null) {
+        const brlPrice = selectedModelDetails.jpyPrice * referenceRate;
+        calculatedPrice = `R$ ${brlPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    } else if (selectedModelDetails?.jpyPrice && referenceRate === null) {
+        calculatedPrice = 'Defina a taxa';
+        priceColor = 'text-yellow-300';
+        priceBg = 'bg-yellow-900/50';
+    }
 
     return (
         <>
             <AppHeader title="Modelos e Preços" user={user} showBackButton onBackClick={goToHome} />
             <main className="flex-1 overflow-y-auto p-6">
-                <div className="max-w-5xl mx-auto space-y-4">
-                    {machineModels.map(model => (
-                        <div key={model.name} className="bg-gray-800/70 backdrop-blur-sm p-5 rounded-xl shadow-lg border border-blue-800/30 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                            <div>
-                                <h3 className="text-xl font-bold text-blue-200">{model.name}</h3>
-                                <p className="text-sm text-gray-400 mb-2">{model.type}</p>
-                                <p className="text-gray-300 text-base">{model.description}</p>
-                            </div>
-                            <div className="text-lg font-semibold text-green-300 bg-green-900/50 px-4 py-2 rounded-lg whitespace-nowrap">
-                                {model.price}
+                <div className="max-w-4xl mx-auto space-y-6">
+                    {/* Selectors */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-gray-800/70 backdrop-blur-sm p-5 rounded-xl shadow-lg border border-blue-800/30">
+                        <div>
+                            <label htmlFor="product-select" className="block text-sm font-medium text-gray-300 mb-2">Produto:</label>
+                            <select
+                                id="product-select"
+                                value={selectedProduct}
+                                onChange={handleProductChange}
+                                className="w-full bg-gray-700/80 border border-gray-600 rounded-md py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                                <option value="">Selecione um Produto</option>
+                                {productTypes.map(type => (
+                                    <option key={type} value={type}>{type}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div>
+                            <label htmlFor="model-select" className="block text-sm font-medium text-gray-300 mb-2">Modelo:</label>
+                            <select
+                                id="model-select"
+                                value={selectedModelName}
+                                onChange={handleModelChange}
+                                disabled={!selectedProduct}
+                                className="w-full bg-gray-700/80 border border-gray-600 rounded-md py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-900 disabled:cursor-not-allowed"
+                            >
+                                <option value="">Selecione um Modelo</option>
+                                {modelsForSelectedProduct.map(model => (
+                                    <option key={model.name} value={model.name}>{model.name}</option>
+                                ))}
+                            </select>
+                        </div>
+                    </div>
+
+                    {/* Model Details */}
+                    {selectedModelDetails && (
+                        <div className="bg-gray-800/70 backdrop-blur-sm p-5 rounded-xl shadow-lg border border-blue-800/30">
+                            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                                <div>
+                                    <h3 className="text-2xl font-bold text-blue-200">{selectedModelDetails.name}</h3>
+                                    <p className="text-md text-gray-400 mb-3">{selectedModelDetails.type}</p>
+                                    <p className="text-gray-300 text-base whitespace-pre-wrap">{selectedModelDetails.description}</p>
+                                </div>
+                                <div className={`text-xl font-semibold ${priceColor} ${priceBg} px-4 py-2 rounded-lg whitespace-nowrap mt-4 md:mt-0`}>
+                                    {calculatedPrice}
+                                </div>
                             </div>
                         </div>
-                    ))}
+                    )}
                 </div>
+            </main>
+        </>
+    );
+};
+
+// ExchangeRatePage: Fetches and displays JPY/BRL exchange rate, and manages the reference rate
+const ExchangeRatePage: React.FC<{
+    user: User;
+    goToHome: () => void;
+    savedReferenceRate: number | null;
+    history: ExchangeRateHistoryEntry[];
+    onUpdateReferenceRate: (newRate: number) => Promise<void>;
+}> = ({ user, goToHome, savedReferenceRate, history, onUpdateReferenceRate }) => {
+    const [currentRate, setCurrentRate] = useState<number | null>(null);
+    const [inputRate, setInputRate] = useState('');
+    const [isLoading, setIsLoading] = useState(true);
+    const [isSaving, setIsSaving] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        const fetchRate = async () => {
+            setIsLoading(true);
+            setError(null);
+            try {
+                const rate = await getExchangeRate();
+                setCurrentRate(rate);
+            } catch (err: any) {
+                setError(err.message || "Ocorreu um erro ao buscar a cotação atual.");
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchRate();
+    }, []);
+
+    useEffect(() => {
+        if (savedReferenceRate !== null) {
+            setInputRate(savedReferenceRate.toString());
+        }
+    }, [savedReferenceRate]);
+
+    const handleSave = async () => {
+        const newRate = parseFloat(inputRate);
+        if (isNaN(newRate) || newRate <= 0) {
+            setError("Por favor, insira uma taxa válida.");
+            return;
+        }
+        setIsSaving(true);
+        setError(null);
+        try {
+            await onUpdateReferenceRate(newRate);
+        } catch (err) {
+            setError("Falha ao salvar a taxa. Tente novamente.");
+        } finally {
+            setIsSaving(false);
+        }
+    };
+    
+    const inputRateNum = parseFloat(inputRate);
+    let comparisonResult: { text: string; color: string } | null = null;
+
+    if (currentRate !== null && !isNaN(inputRateNum) && inputRate.trim() !== '') {
+        const diff = currentRate - inputRateNum;
+        if (Math.abs(diff) < 0.00001) {
+             comparisonResult = { text: 'A taxa atual é igual à sua referência.', color: 'text-gray-400' };
+        } else if (diff > 0) {
+            comparisonResult = { text: `A taxa atual está ${diff.toFixed(4)} BRL acima da sua referência.`, color: 'text-green-400' };
+        } else {
+            comparisonResult = { text: `A taxa atual está ${Math.abs(diff).toFixed(4)} BRL abaixo da sua referência.`, color: 'text-red-400' };
+        }
+    }
+
+    return (
+        <>
+            <AppHeader title="Cotação JPY/BRL" user={user} showBackButton onBackClick={goToHome} />
+            <main className="flex-1 overflow-y-auto p-6 flex flex-col items-center">
+                <div className="w-full max-w-lg bg-gray-800/70 backdrop-blur-sm p-8 rounded-xl shadow-lg border border-blue-800/30 space-y-6 mb-6">
+                    {isLoading && <p className="text-center text-blue-300 animate-pulse">Buscando cotação atual...</p>}
+                    {error && <p className="text-center text-red-400">{error}</p>}
+                    {currentRate !== null && (
+                        <>
+                            <div>
+                                <p className="text-lg text-gray-400 text-center">Cotação Atual (Referência Google):</p>
+                                <p className="text-4xl font-bold text-blue-200 text-center my-2">{currentRate.toFixed(4)} BRL</p>
+                            </div>
+                            
+                            <div className="space-y-2">
+                                <label htmlFor="reference-rate" className="block text-sm font-medium text-gray-300">Taxa de Referência Desejada (para Preços):</label>
+                                <input
+                                    id="reference-rate"
+                                    type="number"
+                                    step="0.0001"
+                                    value={inputRate}
+                                    onChange={(e) => setInputRate(e.target.value)}
+                                    placeholder="Ex: 0.0340"
+                                    className="w-full bg-gray-700/80 border border-gray-600 rounded-md py-3 px-4 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                            </div>
+
+                            {comparisonResult && (
+                                <div className="text-center h-6">
+                                    <p className={`text-md font-semibold ${comparisonResult.color}`}>{comparisonResult.text}</p>
+                                </div>
+                            )}
+
+                            <button 
+                                onClick={handleSave} 
+                                disabled={isSaving || parseFloat(inputRate) === savedReferenceRate}
+                                className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-blue-500 disabled:bg-gray-600 disabled:opacity-75 disabled:cursor-not-allowed transition-all duration-200"
+                            >
+                                {isSaving ? 'Salvando...' : 'Salvar Taxa de Referência'}
+                            </button>
+                        </>
+                    )}
+                </div>
+                
+                {history.length > 0 && (
+                     <div className="w-full max-w-lg bg-gray-800/70 backdrop-blur-sm p-8 rounded-xl shadow-lg border border-blue-800/30">
+                        <h3 className="text-xl font-bold text-blue-200 mb-4 text-center">Histórico de Alterações</h3>
+                        <ul className="space-y-3 max-h-60 overflow-y-auto pr-2">
+                            {history.map(entry => (
+                                <li key={entry.id} className="text-sm p-3 bg-gray-700/50 rounded-lg flex justify-between items-center">
+                                    <div>
+                                        <p className="font-bold text-blue-300">{entry.rate.toFixed(4)} BRL</p>
+                                        <p className="text-gray-400 text-xs">por: {entry.updatedBy}</p>
+                                    </div>
+                                    <p className="text-gray-500 text-xs">
+                                        {entry.updatedAt ? new Date(entry.updatedAt.seconds * 1000).toLocaleString('pt-BR') : ''}
+                                    </p>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                )}
             </main>
         </>
     );

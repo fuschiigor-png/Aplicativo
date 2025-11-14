@@ -5,12 +5,17 @@ import {
     onSnapshot,
     query,
     orderBy,
-    limit
+    limit,
+    doc,
+    runTransaction,
 } from "firebase/firestore";
 import { db } from "./firebase";
-import { GlobalChatMessage } from "../types";
+import { GlobalChatMessage, ExchangeRateHistoryEntry } from "../types";
 
 const GLOBAL_CHAT_COLLECTION = 'global_chat';
+const APP_CONFIG_COLLECTION = 'app_config';
+const EXCHANGE_RATE_DOC_ID = 'exchange_rate';
+const HISTORY_SUBCOLLECTION = 'history';
 
 // Send a new message to the global chat
 export const sendGlobalMessage = async (
@@ -62,6 +67,81 @@ export const getMessagesListener = (
         callback(messages);
     }, (error) => {
         console.error("Error fetching global messages:", error);
+        callback([]);
+    });
+
+    return unsubscribe;
+};
+
+// Update the reference rate and add a history entry
+export const updateExchangeRateConfig = async (
+    rate: number,
+    userEmail: string
+): Promise<void> => {
+    const configDocRef = doc(db, APP_CONFIG_COLLECTION, EXCHANGE_RATE_DOC_ID);
+    try {
+        await runTransaction(db, async (transaction) => {
+            const newHistoryRef = doc(collection(configDocRef, HISTORY_SUBCOLLECTION));
+            
+            transaction.set(configDocRef, {
+                currentRate: rate,
+                lastUpdatedBy: userEmail,
+                lastUpdatedAt: serverTimestamp(),
+            }, { merge: true });
+
+            transaction.set(newHistoryRef, {
+                rate: rate,
+                updatedBy: userEmail,
+                updatedAt: serverTimestamp(),
+            });
+        });
+    } catch (error) {
+        console.error("Error updating exchange rate config:", error);
+        throw error;
+    }
+};
+
+// Listen for real-time updates on the exchange rate config
+export const getExchangeRateConfigListener = (
+    callback: (config: { currentRate: number } | null) => void
+) => {
+    const docRef = doc(db, APP_CONFIG_COLLECTION, EXCHANGE_RATE_DOC_ID);
+    const unsubscribe = onSnapshot(docRef, (docSnap) => {
+        if (docSnap.exists()) {
+            callback(docSnap.data() as { currentRate: number });
+        } else {
+            console.log("No exchange rate config found, using null.");
+            callback(null);
+        }
+    }, (error) => {
+        console.error("Error fetching exchange rate config:", error);
+        callback(null);
+    });
+
+    return unsubscribe;
+};
+
+// Listen for real-time updates on the exchange rate history
+export const getExchangeRateHistoryListener = (
+    callback: (history: ExchangeRateHistoryEntry[]) => void
+) => {
+    const historyColRef = collection(db, APP_CONFIG_COLLECTION, EXCHANGE_RATE_DOC_ID, HISTORY_SUBCOLLECTION);
+    const q = query(historyColRef, orderBy('updatedAt', 'desc'), limit(20));
+
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+        const historyEntries = querySnapshot.docs.map(doc => {
+            const data = doc.data();
+            const updatedAt = data.updatedAt ? { seconds: data.updatedAt.seconds, nanoseconds: data.updatedAt.nanoseconds } : null;
+            return {
+                id: doc.id,
+                rate: data.rate,
+                updatedBy: data.updatedBy,
+                updatedAt: updatedAt,
+            } as ExchangeRateHistoryEntry;
+        });
+        callback(historyEntries);
+    }, (error) => {
+        console.error("Error fetching exchange rate history:", error);
         callback([]);
     });
 
