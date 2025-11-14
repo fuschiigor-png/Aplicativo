@@ -26,6 +26,8 @@ const App: React.FC = () => {
     const savedTheme = localStorage.getItem('theme') as Theme | null;
     if (savedTheme) {
         setTheme(savedTheme);
+    } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        setTheme('dark');
     }
 
     return unsubscribe;
@@ -34,12 +36,10 @@ const App: React.FC = () => {
   useEffect(() => {
       if (theme === 'dark') {
           document.documentElement.classList.add('dark');
-          document.body.classList.add('bg-slate-900');
-          document.body.classList.remove('bg-slate-100');
+          document.body.className = 'bg-gray-950';
       } else {
           document.documentElement.classList.remove('dark');
-          document.body.classList.add('bg-slate-100');
-          document.body.classList.remove('bg-slate-900');
+          document.body.className = 'bg-white';
       }
       localStorage.setItem('theme', theme);
   }, [theme]);
@@ -50,7 +50,7 @@ const App: React.FC = () => {
 
   if (isAuthLoading) {
     return (
-      <div className="flex items-center justify-center h-screen bg-slate-900">
+      <div className="flex items-center justify-center h-screen bg-gray-950">
         <div className="text-white text-xl animate-pulse">Carregando...</div>
       </div>
     );
@@ -98,7 +98,7 @@ const MainDashboard: React.FC<{ user: User; theme: Theme; toggleTheme: () => voi
   const goToHome = () => setView('home');
 
   return (
-    <div className="flex flex-col h-screen text-slate-800 dark:text-slate-200 font-sans transition-colors duration-300">
+    <div className="flex flex-col h-screen text-gray-800 dark:text-gray-200 font-sans">
       {view === 'home' && <HomePage user={user} setView={setView} theme={theme} toggleTheme={toggleTheme} />}
       {view === 'models' && <MachineModelsPage user={user} goToHome={goToHome} referenceRate={referenceRate} theme={theme} toggleTheme={toggleTheme} />}
       {view === 'chat' && <ChatPage user={user} goToHome={goToHome} theme={theme} toggleTheme={toggleTheme} />}
@@ -127,31 +127,41 @@ const AppHeader: React.FC<{
   theme: Theme;
   toggleTheme: () => void;
 }> = ({ title, user, showBackButton, onBackClick, theme, toggleTheme }) => {
+  const [isThemeButtonAnimating, setIsThemeButtonAnimating] = useState(false);
+
+  const handleThemeToggleClick = () => {
+    toggleTheme();
+    setIsThemeButtonAnimating(true);
+    setTimeout(() => {
+        setIsThemeButtonAnimating(false);
+    }, 300); // Animation duration should match transition duration
+  };
+
   return (
-    <header className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm p-4 border-b border-slate-200 dark:border-sky-900/50 shadow-sm flex justify-between items-center relative sticky top-0 z-10">
+    <header className="bg-transparent p-4 flex justify-between items-center sticky top-0 z-10">
       <div className="absolute left-4">
         {showBackButton && (
           <button
             onClick={onBackClick}
-            className="flex items-center gap-2 text-sky-600 dark:text-sky-300 hover:text-sky-800 dark:hover:text-sky-100 transition-colors duration-200 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-slate-800 focus:ring-sky-500 rounded-lg p-2"
+            className="flex items-center gap-2 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 font-bold focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950 focus:ring-blue-500 rounded-full p-2"
             aria-label="Voltar para Home"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
-            <span>Home</span>
+            <span className="hidden sm:inline">Home</span>
           </button>
         )}
       </div>
 
-      <h1 className="text-xl md:text-2xl font-bold text-slate-800 dark:text-sky-300 mx-auto">
+      <h1 className="text-3xl font-extrabold bg-gradient-to-r from-blue-500 via-green-400 to-yellow-400 text-transparent bg-clip-text mx-auto text-center px-16">
         {title}
       </h1>
 
       <div className="absolute right-4 flex items-center gap-4">
-        <span className="text-sm text-slate-600 dark:text-slate-300 hidden sm:block truncate max-w-xs" title={user.email ?? ''}>{user.email}</span>
+        <span className="text-sm text-gray-500 dark:text-gray-400 hidden sm:block truncate max-w-xs" title={user.email ?? ''}>{user.email}</span>
         
         <button
-          onClick={toggleTheme}
-          className="p-2 rounded-full text-slate-500 dark:text-sky-400 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-slate-800 focus:ring-sky-500"
+          onClick={handleThemeToggleClick}
+          className={`p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950 focus:ring-blue-500 transition-transform duration-300 ease-in-out ${isThemeButtonAnimating ? 'scale-125' : 'scale-100'}`}
           aria-label="Toggle theme"
         >
           {theme === 'light' ? <MoonIcon /> : <SunIcon />}
@@ -159,7 +169,7 @@ const AppHeader: React.FC<{
 
         <button
           onClick={handleSignOut}
-          className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-3 rounded-lg transition-colors duration-200 text-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-slate-800 focus:ring-red-500"
+          className="bg-gray-700 hover:bg-gray-800 dark:bg-gray-600 dark:hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950 focus:ring-gray-500"
           aria-label="Sair"
         >
          Sair
@@ -176,26 +186,48 @@ const HomeCard: React.FC<{
     title: string;
     description: string;
 }> = ({ onClick, title, description }) => (
-    <div onClick={onClick} className="bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-md border border-slate-200 dark:border-slate-700 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/80 hover:border-sky-500 dark:hover:border-sky-500 transition-all duration-300 text-center w-full sm:w-80 flex flex-col justify-center transform hover:-translate-y-1">
-        <h3 className="text-2xl font-semibold text-sky-600 dark:text-sky-400 mb-2">{title}</h3>
-        <p className="text-slate-500 dark:text-slate-400">{description}</p>
+    <div 
+        onClick={onClick} 
+        className="bg-gray-100 dark:bg-gray-800 p-8 rounded-3xl cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-all duration-300 text-center w-full sm:w-80 flex flex-col justify-center"
+    >
+        <h3 className="text-2xl font-semibold text-gray-900 dark:text-white mb-2">{title}</h3>
+        <p className="text-gray-500 dark:text-gray-400">{description}</p>
     </div>
 );
 
 
 // HomePage: The main landing page after login
 const HomePage: React.FC<{ user: User; setView: (view: View) => void; theme: Theme; toggleTheme: () => void }> = ({ user, setView, theme, toggleTheme }) => {
+  const [cardsVisible, setCardsVisible] = useState(false);
+  
+  useEffect(() => {
+    const timer = setTimeout(() => setCardsVisible(true), 100);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const cardItems = [
+      { onClick: () => setView('models'), title: "Modelos e Preços", description: "Veja todos os modelos disponíveis." },
+      { onClick: () => setView('chat'), title: "Assistente de Chat", description: "Tire suas dúvidas sobre bordados com a IA." },
+      { onClick: () => setView('global-chat'), title: "Bate-Papo (Recados)", description: "Deixe uma mensagem para outros usuários." },
+      { onClick: () => setView('exchange-rate'), title: "Taxa JPY/BRL", description: "Consulte e defina a cotação do Iene." },
+  ];
+
   return (
     <>
       <AppHeader title="Lista de preços Barudan do Brasil" user={user} theme={theme} toggleTheme={toggleTheme} />
       <main className="flex flex-col items-center justify-center flex-1 p-6">
-        <h2 className="text-4xl font-bold text-slate-900 dark:text-white mb-4">Bem-vindo!</h2>
-        <p className="text-lg text-slate-600 dark:text-slate-300 mb-12">Explore nosso catálogo ou converse com nosso assistente.</p>
+        <h2 className="text-6xl lg:text-8xl font-black text-gray-900 dark:text-white mb-2 text-center">Bem-vindo!</h2>
+        <p className="text-xl text-gray-500 dark:text-gray-400 mb-16 text-center">Explore nosso catálogo ou converse com nosso assistente.</p>
         <div className="flex flex-wrap justify-center gap-8 w-full max-w-5xl">
-            <HomeCard onClick={() => setView('models')} title="Modelos e Preços" description="Veja todos os modelos disponíveis." />
-            <HomeCard onClick={() => setView('chat')} title="Assistente de Chat" description="Tire suas dúvidas sobre bordados com a IA." />
-            <HomeCard onClick={() => setView('global-chat')} title="Bate-Papo (Recados)" description="Deixe uma mensagem para outros usuários." />
-            <HomeCard onClick={() => setView('exchange-rate')} title="Taxa JPY/BRL" description="Consulte e defina a cotação do Iene." />
+            {cardItems.map((card, index) => (
+                <div 
+                    key={card.title} 
+                    className={`transition-all duration-500 ease-out ${cardsVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-5'}`} 
+                    style={{ transitionDelay: `${index * 100}ms`}}
+                >
+                    <HomeCard {...card} />
+                </div>
+            ))}
         </div>
       </main>
     </>
@@ -341,10 +373,19 @@ const productTypes = Object.keys(machineData);
 const MachineModelsPage: React.FC<{ user: User; goToHome: () => void; referenceRate: number | null; theme: Theme; toggleTheme: () => void; }> = ({ user, goToHome, referenceRate, theme, toggleTheme }) => {
     const [selectedProduct, setSelectedProduct] = useState<string>('');
     const [selectedModelName, setSelectedModelName] = useState<string>('');
+    const [isAnimatingDetails, setIsAnimatingDetails] = useState(false);
     
+    useEffect(() => {
+        if (selectedModelName) {
+            setIsAnimatingDetails(false);
+            const timer = setTimeout(() => setIsAnimatingDetails(true), 50);
+            return () => clearTimeout(timer);
+        }
+    }, [selectedModelName]);
+
     const handleProductChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         setSelectedProduct(e.target.value);
-        setSelectedModelName(''); // Reset model selection when product changes
+        setSelectedModelName('');
     };
 
     const handleModelChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -355,16 +396,15 @@ const MachineModelsPage: React.FC<{ user: User; goToHome: () => void; referenceR
     const selectedModelDetails = selectedModelName ? modelsForSelectedProduct.find(m => m.name === selectedModelName) : null;
 
     let calculatedPrice = selectedModelDetails?.price;
-    // Default style for "Consulte-nos" and other text-based prices
-    let priceClasses = 'bg-gradient-to-br from-slate-500 to-slate-600 text-white dark:from-slate-600 dark:to-slate-700';
+    let priceClasses = 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200';
 
     if (selectedModelDetails?.jpyPrice && referenceRate !== null) {
         const brlPrice = selectedModelDetails.jpyPrice * referenceRate;
         calculatedPrice = `R$ ${brlPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-        priceClasses = 'bg-gradient-to-br from-sky-500 to-green-500 text-white';
+        priceClasses = 'bg-gradient-to-br from-blue-500 to-green-500 text-white';
     } else if (selectedModelDetails?.jpyPrice && referenceRate === null) {
         calculatedPrice = 'Defina a taxa';
-        priceClasses = 'bg-gradient-to-br from-yellow-500 to-orange-500 text-white';
+        priceClasses = 'bg-gradient-to-br from-amber-500 to-orange-500 text-white';
     }
 
 
@@ -372,25 +412,25 @@ const MachineModelsPage: React.FC<{ user: User; goToHome: () => void; referenceR
         <>
             <AppHeader title="Modelos e Preços" user={user} showBackButton onBackClick={goToHome} theme={theme} toggleTheme={toggleTheme} />
             <main className="flex-1 overflow-y-auto p-6">
-                <div className="max-w-4xl mx-auto space-y-6">
+                <div className="max-w-4xl mx-auto space-y-8">
                     {/* Selectors */}
-                    <div className="bg-white dark:bg-slate-800 p-5 rounded-xl shadow-md border border-slate-200 dark:border-slate-700">
-                        <div className="text-center mb-4 pb-4 border-b border-slate-200 dark:border-slate-700">
-                             <p className="text-lg text-slate-500 dark:text-slate-400">Taxa de Precificação (JPY/BRL)</p>
+                    <div className="bg-gray-100 dark:bg-gray-800 p-6 rounded-3xl">
+                        <div className="text-center mb-5 pb-5 border-b border-gray-200 dark:border-gray-700">
+                             <p className="text-lg text-gray-500 dark:text-gray-400">Taxa de Precificação (JPY/BRL)</p>
                             {referenceRate !== null ? (
-                                <p className="text-2xl font-bold text-sky-600 dark:text-sky-400">{referenceRate.toFixed(4)}</p>
+                                <p className="text-3xl font-bold text-gray-800 dark:text-gray-100">{referenceRate.toFixed(4)}</p>
                             ) : (
-                                <p className="text-sm text-yellow-500 dark:text-yellow-400">Defina a taxa na página 'Taxa JPY/BRL'.</p>
+                                <p className="text-sm text-amber-500 dark:text-amber-400">Defina a taxa na página 'Taxa JPY/BRL'.</p>
                             )}
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
                             <div>
-                                <label htmlFor="product-select" className="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-2">Produto:</label>
+                                <label htmlFor="product-select" className="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-2">Produto:</label>
                                 <select
                                     id="product-select"
                                     value={selectedProduct}
                                     onChange={handleProductChange}
-                                    className="w-full bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md py-3 px-4 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
+                                    className="w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-xl py-3 px-4 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 >
                                     <option value="">Selecione um Produto</option>
                                     {productTypes.map(type => (
@@ -399,13 +439,13 @@ const MachineModelsPage: React.FC<{ user: User; goToHome: () => void; referenceR
                                 </select>
                             </div>
                             <div>
-                                <label htmlFor="model-select" className="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-2">Modelo:</label>
+                                <label htmlFor="model-select" className="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-2">Modelo:</label>
                                 <select
                                     id="model-select"
                                     value={selectedModelName}
                                     onChange={handleModelChange}
                                     disabled={!selectedProduct}
-                                    className="w-full bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md py-3 px-4 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-500 disabled:bg-slate-200 dark:disabled:bg-slate-900 disabled:cursor-not-allowed"
+                                    className="w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-xl py-3 px-4 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-200 dark:disabled:bg-gray-800/50 disabled:cursor-not-allowed"
                                 >
                                     <option value="">Selecione um Modelo</option>
                                     {modelsForSelectedProduct.map(model => (
@@ -418,14 +458,14 @@ const MachineModelsPage: React.FC<{ user: User; goToHome: () => void; referenceR
 
                     {/* Model Details */}
                     {selectedModelDetails && (
-                        <div className="bg-white dark:bg-slate-800 p-5 rounded-xl shadow-md border border-slate-200 dark:border-slate-700">
-                            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                        <div className={`bg-gray-100 dark:bg-gray-800 p-8 rounded-3xl transition-all duration-500 ease-out ${isAnimatingDetails ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-5'}`}>
+                            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                                 <div>
-                                    <h3 className="text-2xl font-bold text-sky-600 dark:text-sky-400">{selectedModelDetails.name}</h3>
-                                    <p className="text-md text-slate-500 dark:text-slate-400 mb-3">{selectedModelDetails.type}</p>
-                                    <p className="text-slate-600 dark:text-slate-300 text-base whitespace-pre-wrap">{selectedModelDetails.description}</p>
+                                    <h3 className="text-3xl font-bold text-gray-900 dark:text-white">{selectedModelDetails.name}</h3>
+                                    <p className="text-md text-gray-500 dark:text-gray-400 mb-4">{selectedModelDetails.type}</p>
+                                    <p className="text-gray-600 dark:text-gray-300 text-base whitespace-pre-wrap">{selectedModelDetails.description}</p>
                                 </div>
-                                <div className={`text-3xl font-bold ${priceClasses} px-6 py-3 rounded-xl shadow-lg whitespace-nowrap mt-4 md:mt-0 transition-all duration-300`}>
+                                <div className={`text-3xl font-bold ${priceClasses} px-6 py-4 rounded-2xl shadow-md whitespace-nowrap mt-4 md:mt-0`}>
                                     {calculatedPrice}
                                 </div>
                             </div>
@@ -452,6 +492,12 @@ const ExchangeRatePage: React.FC<{
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [isContentVisible, setIsContentVisible] = useState(false);
+
+    useEffect(() => {
+        const timer = setTimeout(() => setIsContentVisible(true), 100);
+        return () => clearTimeout(timer);
+    }, []);
 
     useEffect(() => {
         const fetchRate = async () => {
@@ -499,14 +545,14 @@ const ExchangeRatePage: React.FC<{
         const percentageDiff = ((currentRate - inputRateNum) / inputRateNum) * 100;
         
         if (Math.abs(percentageDiff) < 0.01) {
-             comparisonResult = { text: 'A taxa atual é igual à sua referência.', color: 'text-slate-500 dark:text-slate-400' };
+             comparisonResult = { text: 'A taxa atual é igual à sua referência.', color: 'text-gray-500 dark:text-gray-400' };
         } else if (percentageDiff > 0) {
-            comparisonResult = { text: `A taxa atual está ${percentageDiff.toFixed(2)}% acima da sua referência.`, color: 'text-green-600 dark:text-green-400' };
+            comparisonResult = { text: `A taxa atual está ${percentageDiff.toFixed(2)}% acima da sua referência.`, color: 'text-emerald-600 dark:text-emerald-400' };
         } else {
             comparisonResult = { text: `A taxa atual está ${Math.abs(percentageDiff).toFixed(2)}% abaixo da sua referência.`, color: 'text-red-600 dark:text-red-400' };
         }
     } else if (currentRate !== null && !isNaN(inputRateNum) && inputRate.trim() !== '' && inputRateNum <= 0) {
-        comparisonResult = { text: 'A referência deve ser maior que zero para comparação.', color: 'text-yellow-600 dark:text-yellow-400' };
+        comparisonResult = { text: 'A referência deve ser maior que zero para comparação.', color: 'text-amber-600 dark:text-amber-400' };
     }
 
 
@@ -514,18 +560,18 @@ const ExchangeRatePage: React.FC<{
         <>
             <AppHeader title="Cotação JPY/BRL" user={user} showBackButton onBackClick={goToHome} theme={theme} toggleTheme={toggleTheme} />
             <main className="flex-1 overflow-y-auto p-6 flex flex-col items-center">
-                <div className="w-full max-w-lg bg-white dark:bg-slate-800 p-8 rounded-xl shadow-md border border-slate-200 dark:border-slate-700 space-y-6 mb-6">
-                    {isLoading && <p className="text-center text-sky-600 dark:text-sky-400 animate-pulse">Buscando cotação atual...</p>}
+                <div className={`w-full max-w-lg bg-gray-100 dark:bg-gray-800 p-8 rounded-3xl space-y-6 mb-8 transition-all duration-500 ease-out ${isContentVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-5'}`}>
+                    {isLoading && <p className="text-center text-gray-500 dark:text-gray-400 animate-pulse">Buscando cotação atual...</p>}
                     {error && <p className="text-center text-red-500">{error}</p>}
                     {currentRate !== null && (
                         <>
                             <div>
-                                <p className="text-lg text-slate-500 dark:text-slate-400 text-center">Cotação Atual (Referência Google):</p>
-                                <p className="text-4xl font-bold text-sky-600 dark:text-sky-400 text-center my-2">{currentRate.toFixed(4)} BRL</p>
+                                <p className="text-lg text-gray-500 dark:text-gray-400 text-center">Cotação Atual (Referência Google):</p>
+                                <p className="text-4xl font-bold text-gray-800 dark:text-gray-100 text-center my-2">{currentRate.toFixed(4)} BRL</p>
                             </div>
                             
                             <div className="space-y-2">
-                                <label htmlFor="reference-rate" className="block text-sm font-medium text-slate-600 dark:text-slate-300">Taxa para Precificação</label>
+                                <label htmlFor="reference-rate" className="block text-sm font-medium text-gray-600 dark:text-gray-300">Taxa para Precificação</label>
                                 <input
                                     id="reference-rate"
                                     type="number"
@@ -533,10 +579,10 @@ const ExchangeRatePage: React.FC<{
                                     value={inputRate}
                                     onChange={(e) => setInputRate(e.target.value)}
                                     placeholder="Ex: 0.0340"
-                                    className="w-full bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md py-3 px-4 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                                    className="w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-xl py-3 px-4 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                     aria-describedby="rate-description"
                                 />
-                                <p id="rate-description" className="text-xs text-slate-500 dark:text-slate-400">
+                                <p id="rate-description" className="text-xs text-gray-500 dark:text-gray-400">
                                     Esta taxa será a praticada para precificar os modelos, não a cotação atual do Google.
                                 </p>
                             </div>
@@ -550,7 +596,7 @@ const ExchangeRatePage: React.FC<{
                             <button 
                                 onClick={handleSave} 
                                 disabled={isSaving || parseFloat(inputRate) === savedReferenceRate}
-                                className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-sky-600 hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-slate-800 focus:ring-sky-500 disabled:bg-slate-400 dark:disabled:bg-slate-600 disabled:opacity-75 disabled:cursor-not-allowed transition-all duration-200"
+                                className="w-full flex justify-center py-3 px-4 border border-transparent rounded-full shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950 focus:ring-blue-500 disabled:bg-gray-400 dark:disabled:bg-gray-600 disabled:opacity-75 disabled:cursor-not-allowed"
                             >
                                 {isSaving ? 'Salvando...' : 'Salvar Taxa de Referência'}
                             </button>
@@ -559,16 +605,16 @@ const ExchangeRatePage: React.FC<{
                 </div>
                 
                 {history.length > 0 && (
-                     <div className="w-full max-w-lg bg-white dark:bg-slate-800 p-8 rounded-xl shadow-md border border-slate-200 dark:border-slate-700">
-                        <h3 className="text-xl font-bold text-sky-600 dark:text-sky-400 mb-4 text-center">Histórico de Alterações</h3>
+                     <div className={`w-full max-w-lg bg-gray-100 dark:bg-gray-800 p-8 rounded-3xl transition-all duration-500 ease-out ${isContentVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-5'}`} style={{transitionDelay: '150ms'}}>
+                        <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4 text-center">Histórico de Alterações</h3>
                         <ul className="space-y-3 max-h-60 overflow-y-auto pr-2">
                             {history.map(entry => (
-                                <li key={entry.id} className="text-sm p-3 bg-slate-100 dark:bg-slate-700/50 rounded-lg flex justify-between items-center">
+                                <li key={entry.id} className="text-sm p-3 bg-white dark:bg-gray-700/50 rounded-xl flex justify-between items-center">
                                     <div>
-                                        <p className="font-bold text-sky-700 dark:text-sky-300">{entry.rate.toFixed(4)} BRL</p>
-                                        <p className="text-slate-500 dark:text-slate-400 text-xs">por: {entry.updatedBy}</p>
+                                        <p className="font-bold text-gray-800 dark:text-gray-100">{entry.rate.toFixed(4)} BRL</p>
+                                        <p className="text-gray-500 dark:text-gray-400 text-xs">por: {entry.updatedBy}</p>
                                     </div>
-                                    <p className="text-slate-400 dark:text-slate-500 text-xs">
+                                    <p className="text-gray-400 dark:text-gray-500 text-xs">
                                         {entry.updatedAt ? new Date(entry.updatedAt.seconds * 1000).toLocaleString('pt-BR') : ''}
                                     </p>
                                 </li>
@@ -678,21 +724,21 @@ const GlobalChatPage: React.FC<{ user: User; goToHome: () => void; theme: Theme;
                     ))}
                     <div ref={chatEndRef} />
                 </div>
-                <div className="mt-auto pt-4 border-t border-slate-200 dark:border-sky-900/50">
-                    <form onSubmit={handleSendMessage} className="max-w-4xl mx-auto flex items-center gap-3">
+                <div className="mt-auto bg-transparent">
+                    <form onSubmit={handleSendMessage} className="max-w-4xl mx-auto flex items-center gap-3 py-2">
                         <input
                             type="text"
                             value={newMessage}
                             onChange={(e) => setNewMessage(e.target.value)}
                             placeholder="Digite sua mensagem..."
                             disabled={isLoading}
-                            className="flex-1 bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-full py-3 px-5 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                            className="flex-1 bg-gray-200 dark:bg-gray-800 border-transparent rounded-full py-3 px-5 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
                             aria-label="Caixa de mensagem"
                         />
                         <button
                             type="submit"
                             disabled={isLoading || !newMessage.trim()}
-                            className="bg-sky-600 text-white rounded-full p-3 hover:bg-sky-700 disabled:bg-slate-400 dark:disabled:bg-slate-600 disabled:cursor-not-allowed transition-colors duration-200"
+                            className="bg-blue-600 text-white rounded-full p-3 hover:bg-blue-700 disabled:bg-gray-400 dark:disabled:bg-gray-600 disabled:cursor-not-allowed"
                             aria-label="Enviar mensagem"
                         >
                             <svg className="w-6 h-6 transform rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>

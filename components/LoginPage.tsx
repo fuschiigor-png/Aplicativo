@@ -33,15 +33,15 @@ const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center h-screen bg-slate-100 dark:bg-slate-900 text-slate-900 dark:text-white font-sans p-4 transition-colors duration-300">
-      <div className="w-full max-w-md bg-white dark:bg-slate-800 rounded-2xl shadow-lg border border-slate-200 dark:border-slate-700 p-8">
-        <h1 className="text-3xl font-bold text-center text-sky-600 dark:text-sky-400 mb-2">
+    <div className="flex flex-col items-center justify-center h-screen bg-white dark:bg-gray-950 text-gray-900 dark:text-white p-4">
+      <div className="w-full max-w-md bg-gray-100 dark:bg-gray-800 rounded-3xl p-8 sm:p-12">
+        <h1 className="text-4xl font-black text-center bg-gradient-to-r from-blue-500 via-green-400 to-yellow-400 text-transparent bg-clip-text mb-2">
           Lista de preços Barudan do Brasil
         </h1>
-        <p className="text-center text-slate-500 dark:text-slate-400 mb-8">Faça login para continuar</p>
+        <p className="text-center text-gray-500 dark:text-gray-400 mb-8">Faça login para continuar</p>
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-slate-600 dark:text-slate-300">
+            <label htmlFor="email" className="block text-sm font-medium text-gray-600 dark:text-gray-300">
               Email
             </label>
             <input
@@ -52,11 +52,11 @@ const LoginPage: React.FC = () => {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="mt-1 block w-full bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md py-3 px-4 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent transition"
+              className="mt-1 block w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-xl py-3 px-4 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-slate-600 dark:text-slate-300">
+            <label htmlFor="password" className="block text-sm font-medium text-gray-600 dark:text-gray-300">
               Senha
             </label>
             <input
@@ -67,7 +67,7 @@ const LoginPage: React.FC = () => {
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="mt-1 block w-full bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md py-3 px-4 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent transition"
+              className="mt-1 block w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-xl py-3 px-4 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
           {error && (
@@ -77,7 +77,7 @@ const LoginPage: React.FC = () => {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-sky-600 hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-slate-800 focus:ring-sky-500 disabled:bg-slate-400 dark:disabled:bg-slate-600 disabled:opacity-75 disabled:cursor-not-allowed transition-all duration-200"
+              className="w-full flex justify-center py-3 px-4 border border-transparent rounded-full shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-100 dark:focus:ring-offset-gray-800 focus:ring-blue-500 disabled:bg-gray-400 dark:disabled:bg-gray-600 disabled:opacity-75 disabled:cursor-not-allowed"
             >
               {isLoading ? 'Entrando...' : 'Entrar / Registrar'}
             </button>
