@@ -34,15 +34,19 @@ const App: React.FC = () => {
   return currentUser ? <MainDashboard user={currentUser} /> : <LoginPage />;
 };
 
-// MainDashboard: Handles navigation between Home, Chat, and Global Chat
+// MainDashboard: Handles navigation between Home, Chat, and other views
+type View = 'home' | 'types' | 'models' | 'chat' | 'global-chat';
+
 const MainDashboard: React.FC<{ user: User }> = ({ user }) => {
-  const [view, setView] = useState<'home' | 'chat' | 'global-chat'>('home');
+  const [view, setView] = useState<View>('home');
 
   const goToHome = () => setView('home');
 
   return (
     <div className="flex flex-col h-screen bg-gradient-to-br from-gray-900 via-slate-800 to-blue-900 text-white font-sans">
       {view === 'home' && <HomePage user={user} setView={setView} />}
+      {view === 'types' && <MachineTypesPage user={user} goToHome={goToHome} />}
+      {view === 'models' && <MachineModelsPage user={user} goToHome={goToHome} />}
       {view === 'chat' && <ChatPage user={user} goToHome={goToHome} />}
       {view === 'global-chat' && <GlobalChatPage user={user} goToHome={goToHome} />}
     </div>
@@ -91,21 +95,29 @@ const AppHeader: React.FC<{
 };
 
 // HomePage: The main landing page after login
-const HomePage: React.FC<{ user: User; setView: (view: 'chat' | 'global-chat') => void }> = ({ user, setView }) => {
+const HomePage: React.FC<{ user: User; setView: (view: View) => void }> = ({ user, setView }) => {
   return (
     <>
-      <AppHeader title="Assistente Criativo" user={user} />
+      <AppHeader title="Catálogo de Máquinas de Bordado" user={user} />
       <main className="flex flex-col items-center justify-center flex-1 p-6">
         <h2 className="text-4xl font-bold text-white mb-4">Bem-vindo!</h2>
-        <p className="text-lg text-gray-300 mb-12">O que você gostaria de fazer hoje?</p>
+        <p className="text-lg text-gray-300 mb-12">Explore nosso catálogo ou converse com nosso assistente.</p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-4xl">
+          <div onClick={() => setView('types')} className="bg-gray-800/60 backdrop-blur-sm p-8 rounded-2xl shadow-lg border border-blue-800/30 cursor-pointer hover:bg-gray-700/80 hover:border-blue-600 transition-all duration-300 text-center">
+            <h3 className="text-2xl font-semibold text-blue-200 mb-2">Tipos de Máquinas</h3>
+            <p className="text-gray-400">Navegue pelas categorias de máquinas.</p>
+          </div>
+          <div onClick={() => setView('models')} className="bg-gray-800/60 backdrop-blur-sm p-8 rounded-2xl shadow-lg border border-blue-800/30 cursor-pointer hover:bg-gray-700/80 hover:border-blue-600 transition-all duration-300 text-center">
+            <h3 className="text-2xl font-semibold text-blue-200 mb-2">Modelos e Preços</h3>
+            <p className="text-gray-400">Veja todos os modelos disponíveis.</p>
+          </div>
           <div onClick={() => setView('chat')} className="bg-gray-800/60 backdrop-blur-sm p-8 rounded-2xl shadow-lg border border-blue-800/30 cursor-pointer hover:bg-gray-700/80 hover:border-blue-600 transition-all duration-300 text-center">
             <h3 className="text-2xl font-semibold text-blue-200 mb-2">Assistente de Chat</h3>
-            <p className="text-gray-400">Converse com a IA para obter fatos rápidos e curiosidades.</p>
+            <p className="text-gray-400">Tire suas dúvidas sobre bordados com a IA.</p>
           </div>
           <div onClick={() => setView('global-chat')} className="bg-gray-800/60 backdrop-blur-sm p-8 rounded-2xl shadow-lg border border-blue-800/30 cursor-pointer hover:bg-gray-700/80 hover:border-blue-600 transition-all duration-300 text-center">
             <h3 className="text-2xl font-semibold text-blue-200 mb-2">Bate-papo Global</h3>
-            <p className="text-gray-400">Converse com outros usuários em tempo real.</p>
+            <p className="text-gray-400">Converse com outros entusiastas.</p>
           </div>
         </div>
       </main>
@@ -113,10 +125,70 @@ const HomePage: React.FC<{ user: User; setView: (view: 'chat' | 'global-chat') =
   );
 };
 
+// MachineTypesPage: Displays categories of embroidery machines
+const MachineTypesPage: React.FC<{ user: User; goToHome: () => void }> = ({ user, goToHome }) => {
+    const machineTypes = [
+        { name: 'Doméstica', description: 'Ideal para iniciantes e projetos caseiros, com interfaces amigáveis e designs compactos.' },
+        { name: 'Semi-industrial', description: 'Um passo à frente, oferecendo mais velocidade e durabilidade para pequenos negócios.' },
+        { name: 'Industrial', description: 'Para produção em larga escala, com múltiplas agulhas e alta velocidade de operação.' },
+        { name: 'Portátil', description: 'Leves e fáceis de transportar, perfeitas para eventos, feiras ou aulas de bordado.' },
+    ];
+
+    return (
+        <>
+            <AppHeader title="Tipos de Máquinas" user={user} showBackButton onBackClick={goToHome} />
+            <main className="flex-1 overflow-y-auto p-6">
+                <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {machineTypes.map(type => (
+                        <div key={type.name} className="bg-gray-800/70 backdrop-blur-sm p-6 rounded-xl shadow-lg border border-blue-800/30">
+                            <h3 className="text-2xl font-bold text-blue-200 mb-3">{type.name}</h3>
+                            <p className="text-gray-300">{type.description}</p>
+                        </div>
+                    ))}
+                </div>
+            </main>
+        </>
+    );
+};
+
+// MachineModelsPage: Displays specific models and prices
+const MachineModelsPage: React.FC<{ user: User; goToHome: () => void }> = ({ user, goToHome }) => {
+    const machineModels = [
+        { name: 'Brother PE535', type: 'Doméstica', price: 'R$ 2.800,00', description: 'Ótima para iniciantes, com área de bordado de 10x10cm e 80 designs inclusos.' },
+        { name: 'Singer EM200', type: 'Doméstica', price: 'R$ 3.200,00', description: 'Possui 200 designs de bordado e 6 opções de fontes, com área de 26x15cm.' },
+        { name: 'Janome MC500E', type: 'Semi-industrial', price: 'R$ 8.500,00', description: 'Área de bordado de 28x20cm, velocidade de até 860 ppm e tela de toque colorida.' },
+        { name: 'Brother PR680W', type: 'Industrial', price: 'R$ 45.000,00', description: 'Máquina de 6 agulhas, ideal para produção, com conexão wireless e câmera de posicionamento.' },
+        { name: 'Elna eXpressive 830', type: 'Semi-industrial', price: 'R$ 12.000,00', description: 'Ampla área de trabalho e braço livre para bordar em peças fechadas.' },
+    ];
+
+    return (
+        <>
+            <AppHeader title="Modelos e Preços" user={user} showBackButton onBackClick={goToHome} />
+            <main className="flex-1 overflow-y-auto p-6">
+                <div className="max-w-5xl mx-auto space-y-4">
+                    {machineModels.map(model => (
+                        <div key={model.name} className="bg-gray-800/70 backdrop-blur-sm p-5 rounded-xl shadow-lg border border-blue-800/30 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                            <div>
+                                <h3 className="text-xl font-bold text-blue-200">{model.name}</h3>
+                                <p className="text-sm text-gray-400 mb-2">{model.type}</p>
+                                <p className="text-gray-300 text-base">{model.description}</p>
+                            </div>
+                            <div className="text-lg font-semibold text-green-300 bg-green-900/50 px-4 py-2 rounded-lg whitespace-nowrap">
+                                {model.price}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </main>
+        </>
+    );
+};
+
+
 // ChatPage: New page for the chat functionality
 const ChatPage: React.FC<{ user: User; goToHome: () => void }> = ({ user, goToHome }) => {
   const [messages, setMessages] = useState<Message[]>([
-    { sender: MessageSender.AI, text: "Olá! Sobre o que você gostaria de saber um fato curioso hoje?" },
+    { sender: MessageSender.AI, text: "Olá! Sou seu assistente de máquinas de bordado. Em que posso ajudar?" },
   ]);
   const [isLoading, setIsLoading] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -142,7 +214,7 @@ const ChatPage: React.FC<{ user: User; goToHome: () => void }> = ({ user, goToHo
   };
 
   const handleSendCuriosity = () => {
-    handleSendMessage("Me conte uma curiosidade aleatória e interessante.");
+    handleSendMessage("Me fale um fato interessante sobre bordado.");
   };
 
   return (

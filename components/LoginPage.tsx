@@ -29,7 +29,7 @@ const LoginPage: React.FC = () => {
     <div className="flex flex-col items-center justify-center h-screen bg-gradient-to-br from-gray-900 via-slate-800 to-blue-900 text-white font-sans p-4">
       <div className="w-full max-w-md bg-gray-900/50 backdrop-blur-sm rounded-2xl shadow-lg p-8">
         <h1 className="text-3xl font-bold text-center text-blue-300 mb-2">
-          Assistente Criativo
+          Catálogo de Bordado
         </h1>
         <p className="text-center text-gray-400 mb-8">Faça login para continuar</p>
         <form onSubmit={handleSubmit} className="space-y-6">

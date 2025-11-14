@@ -1,5 +1,5 @@
 {
-  "name": "Assistente Criativo de Fatos",
-  "description": "Um assistente de IA que fornece fatos rápidos e curiosidades interessantes sobre qualquer tópico em português, com uma interface de chat elegante.",
+  "name": "Catálogo de Máquinas de Bordado",
+  "description": "Um aplicativo para visualizar preços e modelos de máquinas de bordado, com um assistente de IA e chat global.",
   "requestFramePermissions": []
 }

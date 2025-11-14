@@ -20,18 +20,3 @@ export interface GlobalChatMessage {
   userId: string;
   userEmail: string;
 }
-
-// FIX: Export 'ImageAnalysis' type to fix import error in videoService.ts
-export interface ImageAnalysis {
-  id: string;
-  title: string;
-  imageUrl: string;
-  storagePath: string;
-  status: 'processing' | 'completed' | 'failed';
-  insights?: string;
-  transcript?: string;
-  createdAt: {
-    seconds: number;
-    nanoseconds: number;
-  } | null;
-}
