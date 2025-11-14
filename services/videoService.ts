@@ -78,10 +78,26 @@ export const getUserImages = (
   const q = query(imageCollectionRef, orderBy('createdAt', 'desc'));
   
   const unsubscribe = onSnapshot(q, (querySnapshot) => {
-    const images = querySnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-    } as ImageAnalysis));
+    const images = querySnapshot.docs.map(doc => {
+      const data = doc.data();
+      const createdAtTimestamp = data.createdAt; // Firestore Timestamp object or null
+
+      // Manually construct the createdAt object to match the type
+      const createdAt = createdAtTimestamp
+        ? { seconds: createdAtTimestamp.seconds, nanoseconds: createdAtTimestamp.nanoseconds }
+        : null;
+
+      return {
+        id: doc.id,
+        title: data.title,
+        imageUrl: data.imageUrl,
+        storagePath: data.storagePath,
+        status: data.status,
+        insights: data.insights,
+        transcript: data.transcript,
+        createdAt,
+      } as ImageAnalysis;
+    });
     callback(images);
   }, (error) => {
     console.error("Erro ao buscar imagens:", error);

@@ -42,10 +42,23 @@ export const getMessagesListener = (
     );
 
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
-        const messages = querySnapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data(),
-        } as GlobalChatMessage));
+        const messages = querySnapshot.docs.map(doc => {
+            const data = doc.data();
+            const createdAtTimestamp = data.createdAt; // Firestore Timestamp object or null
+
+            // Manually construct the createdAt object to match the type
+            const createdAt = createdAtTimestamp
+                ? { seconds: createdAtTimestamp.seconds, nanoseconds: createdAtTimestamp.nanoseconds }
+                : null;
+
+            return {
+                id: doc.id,
+                text: data.text,
+                userId: data.userId,
+                userEmail: data.userEmail,
+                createdAt: createdAt,
+            } as GlobalChatMessage;
+        });
         callback(messages);
     }, (error) => {
         console.error("Error fetching global messages:", error);
