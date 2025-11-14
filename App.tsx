@@ -194,14 +194,50 @@ const machineData: Record<string, { name: string; type: string; price: string; d
       type: 'Industrial (Elite Jr)', 
       price: 'Consulte-nos', 
       jpyPrice: 2560000,
-      description: 'Máquina de um cabeçote com 15 agulhas, ideal para peças fechadas e bonés prontos.\n\n• Velocidade Máxima: 1.200 PPM\n• Área de Bordado: 250x400mm\n• Valor de Referência: ¥2.560.000 (Iene)\n• O valor em Reais é calculado com base na cotação do dia da importação.' 
+      description: 'Máquina de um cabeçote com 15 agulhas, ideal para peças fechadas e bonés prontos.\n\n• Velocidade Máxima: 1.200 PPM\n• Área de Bordado: 250x400mm\n• Valor de Referência: ¥2.560.000 (Iene)'
     },
-    { name: 'BEKT-S1501CBIII', type: 'Industrial', price: 'Consulte', description: 'Modelo padrão com alta velocidade e precisão para diversos materiais.' },
-    { name: 'BEKT-S1501CBIII (B32)', type: 'Industrial', price: 'Consulte', description: 'Versão com bastidor para bonés, otimizada para acessórios.' },
-    { name: 'BEKT-S1501CBIII (B33)', type: 'Industrial', price: 'Consulte', description: 'Inclui conjunto de bastidores cilíndricos para mangas e calças.' },
-    { name: 'BEKT-S1501CBIII (B42)', type: 'Industrial', price: 'Consulte', description: 'Equipada com bastidor de bonés largo para designs maiores.' },
-    { name: 'BEKT-S1501CBIII (B43)', type: 'Industrial', price: 'Consulte', description: 'Pacote completo com bastidores cilíndricos e para bonés.' },
-    { name: 'BEKT-S1501CBIII - Campo Estendido', type: 'Industrial', price: 'Consulte', description: 'Área de bordado ampliada para peças grandes como jaquetas e banners.' },
+    { 
+      name: 'BEKT-S1501CBIII', 
+      type: 'Industrial', 
+      price: 'Consulte-nos',
+      jpyPrice: 2850000,
+      description: 'Máquina de um cabeçote com 15 agulhas, ideal para peças fechadas e bonés prontos.\n\n• Velocidade Máxima: 1.200 PPM\n• Área de Bordado: 360x500mm\n• Valor de Referência: ¥2.850.000 (Iene)'
+    },
+    { 
+      name: 'BEKT-S1501CBIII (B32)', 
+      type: 'Industrial', 
+      price: 'Consulte-nos', 
+      jpyPrice: 3380000,
+      description: 'Equipada com dispositivo de Lantejoula SIMPLES (LF).\n\n• Área de Bordado: 360x500mm\n• Valor de Referência: ¥3.380.000 (Iene)'
+    },
+    { 
+      name: 'BEKT-S1501CBIII (B33)', 
+      type: 'Industrial', 
+      price: 'Consulte-nos', 
+      jpyPrice: 4000000,
+      description: 'Equipada com dispositivo de Lantejoula DUPLO (LF+RH).\n\n• Área de Bordado: 360x500mm\n• Valor de Referência: ¥4.000.000 (Iene)'
+    },
+    { 
+      name: 'BEKT-S1501CBIII (B42)', 
+      type: 'Industrial', 
+      price: 'Consulte', 
+      jpyPrice: 3500000,
+      description: 'Equipada com dispositivo de Lantejoula GEMINADA SIMPLES.\n\n• Área de Bordado: 360x500mm\n• Valor de Referência: ¥3.500.000 (Iene)'
+    },
+    { 
+      name: 'BEKT-S1501CBIII (B43)', 
+      type: 'Industrial', 
+      price: 'Consulte', 
+      jpyPrice: 3700000,
+      description: 'Equipada com dispositivo de Lantejoula GEMINADA DUPLO.\n\n• Área de Bordado: 360x500mm\n• Valor de Referência: ¥3.700.000 (Iene)'
+    },
+    { 
+      name: 'BEKT-S1501CBIII - Campo Estendido', 
+      type: 'Industrial', 
+      price: 'Consulte', 
+      jpyPrice: 3960000,
+      description: 'Máquina de um cabeçote com 15 agulhas e campo estendido.\n\n• Velocidade Máxima: 1.000 PPM\n• Área de Bordado: 360x1200mm\n• Valor de Referência: ¥3.960.000 (Iene)'
+    },
   ],
   '02 Cabeças': [
       { name: 'Modelo 2C-A', type: 'Industrial', price: 'R$ 25.000,00', description: 'Máquina de 2 cabeças para pequenas produções.' },
