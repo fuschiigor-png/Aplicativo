@@ -156,7 +156,7 @@ const AppHeader: React.FC<{
         )}
       </div>
 
-      <h1 className="text-3xl font-extrabold bg-gradient-to-r from-blue-500 via-green-400 to-yellow-400 text-transparent bg-clip-text text-center mx-4 truncate">
+      <h1 className="text-2xl font-semibold text-gray-900 dark:text-white text-center mx-4 truncate">
         {title}
       </h1>
 
@@ -179,51 +179,55 @@ const HomePage: React.FC<{ setView: (view: View) => void; }> = ({ setView }) => 
       { 
         onClick: () => setView('models'), 
         title: "Modelos e Preços", 
-        icon: <ModelsIcon className="w-9 h-9 text-blue-600 dark:text-blue-400" />,
-        color: "bg-blue-100 dark:bg-blue-900/40 hover:bg-blue-200 dark:hover:bg-blue-900/80"
+        description: "Consulte especificações e valores",
+        icon: <ModelsIcon className="w-6 h-6 text-white" />,
+        iconBgColor: "bg-blue-600"
       },
       { 
         onClick: () => setView('chat'), 
         title: "Pesquise com Barudex", 
-        icon: <BarudexIcon className="w-10 h-10" />,
-        color: "bg-cyan-100 dark:bg-cyan-900/40 hover:bg-cyan-200 dark:hover:bg-cyan-900/80"
+        description: "Tire suas dúvidas com nosso assistente",
+        icon: <BarudexIcon className="w-6 h-6" />,
+        iconBgColor: "bg-cyan-500"
       },
       { 
         onClick: () => setView('global-chat'), 
         title: "Bate-Papo", 
-        icon: <GlobalChatIcon className="w-9 h-9 text-green-600 dark:text-green-400" />,
-        color: "bg-green-100 dark:bg-green-900/40 hover:bg-green-200 dark:hover:bg-green-900/80"
+        description: "Deixe um recado para a equipe",
+        icon: <GlobalChatIcon className="w-6 h-6 text-white" />,
+        iconBgColor: "bg-green-500"
       },
       { 
         onClick: () => setView('exchange-rate'), 
         title: "Taxa JPY/BRL", 
-        icon: <ExchangeRateIcon className="w-9 h-9 text-amber-600 dark:text-amber-400" />,
-        color: "bg-amber-100 dark:bg-amber-900/40 hover:bg-amber-200 dark:hover:bg-amber-900/80"
+        description: "Ajuste a taxa de precificação",
+        icon: <ExchangeRateIcon className="w-6 h-6 text-white" />,
+        iconBgColor: "bg-amber-500"
       },
   ];
 
   return (
     <>
-      <AppHeader title="Lista de preços Barudan do Brasil" />
-      <main className="flex flex-col items-center justify-center flex-1 p-6">
-        <div className="flex flex-wrap justify-center items-start gap-x-8 gap-y-12 w-full max-w-3xl">
+      <AppHeader title="Lista de preços Barudan" />
+      <main className="flex flex-col items-center flex-1 p-4 sm:p-6">
+        <div className="w-full max-w-2xl space-y-3">
             {navItems.map((item, index) => (
-                <div 
-                    key={item.title} 
-                    className={`transition-all duration-500 ease-out ${buttonsVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-5'}`} 
-                    style={{ transitionDelay: `${index * 100}ms`}}
+                <button 
+                    key={item.title}
+                    onClick={item.onClick}
+                    className={`w-full flex items-center gap-4 text-left p-3 rounded-3xl bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700/60 active:bg-gray-300/80 dark:active:bg-gray-900/60 transition-all duration-500 ease-out ${buttonsVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-5'}`}
+                    style={{ transitionDelay: `${index * 100}ms` }}
+                    aria-label={item.title}
                 >
-                    <button 
-                      onClick={item.onClick}
-                      className="flex flex-col items-center gap-3 text-center w-40 group"
-                      aria-label={item.title}
-                    >
-                      <div className={`w-24 h-24 rounded-full flex items-center justify-center transition-all duration-300 group-hover:scale-110 ${item.color}`}>
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${item.iconBgColor}`}>
                         {item.icon}
-                      </div>
-                      <span className="font-semibold text-gray-700 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{item.title}</span>
-                    </button>
-                </div>
+                    </div>
+                    <div className="flex-1">
+                        <h2 className="text-md font-semibold text-gray-800 dark:text-gray-100">{item.title}</h2>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">{item.description}</p>
+                    </div>
+                    <svg className="w-5 h-5 ml-auto text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                </button>
             ))}
         </div>
       </main>
