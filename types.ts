@@ -30,3 +30,30 @@ export interface ExchangeRateHistoryEntry {
     nanoseconds: number;
   } | null;
 }
+
+export interface Order {
+  id: string;
+  userId: string;
+  userEmail: string;
+  createdAt: { seconds: number; nanoseconds: number; } | null;
+  PEDIDO_NUMERO: string;
+  PEDIDO_DATA: string;
+  VENDEDOR_NOME: string;
+  TIPO_VENDA: string;
+  CLIENTE_RAZAO_SOCIAL: string;
+  CLIENTE_CNPJ: string;
+  CLIENTE_ENDERECO: string;
+  CLIENTE_BAIRRO: string;
+  CLIENTE_CEP: string;
+  CLIENTE_CIDADE: string;
+  CLIENTE_UF: string;
+  CLIENTE_TELEFONE: string;
+  CLIENTE_CONTATO_AC: string;
+  TRANSPORTADORA: string;
+  PRODUTO_QUANTIDADE: string;
+  PRODUTO_DESCRICAO: string;
+  PEDIDO_VALOR_TOTAL: string;
+  ENTREGA_PREVISAO_MES: string;
+  VENCIMENTO_DIA: string;
+  OBSERVACAO_GERAL: string;
+}

@@ -2,13 +2,14 @@ import React, { useState, useEffect, useRef, FormEvent } from 'react';
 import { User } from 'firebase/auth';
 import LoginPage from './components/LoginPage';
 import { onAuthStateChangedListener, handleSignOut } from './services/authService';
-import { Message, MessageSender, GlobalChatMessage as GlobalChatMessageType, ExchangeRateHistoryEntry } from './types';
+import { Message, MessageSender, GlobalChatMessage as GlobalChatMessageType, ExchangeRateHistoryEntry, Order } from './types';
 import ChatInput from './components/ChatInput';
 import ChatMessage from './components/ChatMessage';
 import GlobalChatMessage from './components/GlobalChatMessage';
 import { generateChatResponse, getExchangeRate } from './services/geminiService';
-import { getMessagesListener, sendGlobalMessage, getExchangeRateConfigListener, getExchangeRateHistoryListener, updateExchangeRateConfig } from './services/chatService';
-import { BarudexIcon, MoonIcon, SunIcon, ModelsIcon, GlobalChatIcon, ExchangeRateIcon, LogoutIcon } from './components/Icons';
+import { getMessagesListener, sendGlobalMessage, getExchangeRateConfigListener, getExchangeRateHistoryListener, updateExchangeRateConfig, saveOrder, getOrdersListener } from './services/chatService';
+import { BarudexIcon, MoonIcon, SunIcon, ModelsIcon, GlobalChatIcon, ExchangeRateIcon, LogoutIcon, DocumentIcon, HistoryIcon, CatalogIcon } from './components/Icons';
+import { generateOrderPdf } from './services/pdfService';
 
 type Theme = 'light' | 'dark';
 
@@ -61,10 +62,11 @@ const App: React.FC = () => {
 };
 
 // MainDashboard: Handles navigation between Home, Chat, and other views
-type View = 'home' | 'models' | 'chat' | 'global-chat' | 'exchange-rate';
+type View = 'home' | 'models' | 'chat' | 'global-chat' | 'exchange-rate' | 'order' | 'my-orders' | 'catalog';
 
 const MainDashboard: React.FC<{ user: User; theme: Theme; toggleTheme: () => void; }> = ({ user, theme, toggleTheme }) => {
   const [view, setView] = useState<View>('home');
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [referenceRate, setReferenceRate] = useState<number | null>(null);
   const [exchangeRateHistory, setExchangeRateHistory] = useState<ExchangeRateHistoryEntry[]>([]);
 
@@ -97,14 +99,27 @@ const MainDashboard: React.FC<{ user: User; theme: Theme; toggleTheme: () => voi
   };
 
   const goToHome = () => setView('home');
+  
+  const handleSelectOrder = (order: Order) => {
+    setSelectedOrder(order);
+    setView('order');
+  };
+
+  const handleNewOrder = () => {
+    setSelectedOrder(null);
+    setView('order');
+  };
 
   return (
     <div className="flex flex-col h-screen text-gray-800 dark:text-gray-200 font-sans">
-      {view === 'home' && <HomePage setView={setView} />}
+      {view === 'home' && <HomePage setView={setView} onNewOrderClick={handleNewOrder} />}
       {view === 'models' && <MachineModelsPage goToHome={goToHome} referenceRate={referenceRate} />}
       {view === 'chat' && <ChatPage goToHome={goToHome} />}
       {view === 'global-chat' && <GlobalChatPage user={user} goToHome={goToHome} />}
       {view === 'exchange-rate' && <ExchangeRatePage goToHome={goToHome} savedReferenceRate={referenceRate} history={exchangeRateHistory} onUpdateReferenceRate={handleUpdateReferenceRate} />}
+      {view === 'order' && <OrderPage goToHome={goToHome} user={user} initialOrder={selectedOrder} />}
+      {view === 'my-orders' && <MyOrdersPage goToHome={goToHome} user={user} onSelectOrder={handleSelectOrder} />}
+      {view === 'catalog' && <CatalogPage goToHome={goToHome} />}
       
       {/* Floating Action Buttons Container */}
       <div className="fixed bottom-0 left-0 right-0 p-4 sm:p-6 flex justify-center z-20 pointer-events-none">
@@ -167,7 +182,7 @@ const AppHeader: React.FC<{
 
 
 // HomePage: The main landing page after login
-const HomePage: React.FC<{ setView: (view: View) => void; }> = ({ setView }) => {
+const HomePage: React.FC<{ setView: (view: View) => void; onNewOrderClick: () => void; }> = ({ setView, onNewOrderClick }) => {
   const [buttonsVisible, setButtonsVisible] = useState(false);
   
   useEffect(() => {
@@ -182,6 +197,13 @@ const HomePage: React.FC<{ setView: (view: View) => void; }> = ({ setView }) => 
         description: "Consulte especificações e valores",
         icon: <ModelsIcon className="w-6 h-6 text-white" />,
         iconBgColor: "bg-blue-600"
+      },
+      { 
+        onClick: () => setView('catalog'), 
+        title: "Catálogo", 
+        description: "Insumos e acessórios para bordado",
+        icon: <CatalogIcon className="w-6 h-6 text-white" />,
+        iconBgColor: "bg-teal-500"
       },
       { 
         onClick: () => setView('chat'), 
@@ -203,6 +225,20 @@ const HomePage: React.FC<{ setView: (view: View) => void; }> = ({ setView }) => 
         description: "Ajuste a taxa de precificação",
         icon: <ExchangeRateIcon className="w-6 h-6 text-white" />,
         iconBgColor: "bg-amber-500"
+      },
+      { 
+        onClick: onNewOrderClick, 
+        title: "Gerar Pedido", 
+        description: "Crie um novo pedido de compra",
+        icon: <DocumentIcon className="w-6 h-6 text-white" />,
+        iconBgColor: "bg-purple-500"
+      },
+      { 
+        onClick: () => setView('my-orders'), 
+        title: "Meus Pedidos", 
+        description: "Consulte seus pedidos salvos",
+        icon: <HistoryIcon className="w-6 h-6 text-white" />,
+        iconBgColor: "bg-pink-500"
       },
   ];
 
@@ -478,6 +514,75 @@ const MachineModelsPage: React.FC<{ goToHome: () => void; referenceRate: number 
     );
 };
 
+// CatalogPage: Displays a grid of products
+const catalogData = [
+    {
+      name: 'Linha de Bordar Ricamare',
+      price: 'R$ 15,00',
+      image: 'https://i.ibb.co/6gYCFyN/linha-ricamare.jpg'
+    },
+    {
+      name: 'Agulhas Groz-Beckert',
+      price: 'R$ 150,00',
+      image: 'https://i.ibb.co/pwns0yV/agulha-groz-beckert.jpg'
+    },
+    {
+      name: 'Entretela Rasgável',
+      price: 'R$ 80,00',
+      image: 'https://i.ibb.co/fDbk3G6/entretela-rasgavel.jpg'
+    },
+    {
+      name: 'Óleo Singer',
+      price: 'R$ 12,00',
+      image: 'https://i.ibb.co/hK7dYgR/oleo-singer.jpg'
+    },
+    {
+      name: 'Bastidor Magnético',
+      price: 'R$ 450,00',
+      image: 'https://i.ibb.co/zNcz7z0/bastidor-magnetico.jpg'
+    },
+    {
+      name: 'Tesoura de Arremate',
+      price: 'R$ 25,00',
+      image: 'https://i.ibb.co/R9m4HjX/tesoura-arremate.jpg'
+    },
+];
+
+const CatalogPage: React.FC<{ goToHome: () => void }> = ({ goToHome }) => {
+    const [itemsVisible, setItemsVisible] = useState(false);
+
+    useEffect(() => {
+        const timer = setTimeout(() => setItemsVisible(true), 100);
+        return () => clearTimeout(timer);
+    }, []);
+
+    return (
+        <>
+            <AppHeader title="Catálogo" showBackButton onBackClick={goToHome} />
+            <main className="flex-1 overflow-y-auto p-4 sm:p-6">
+                <div className="max-w-6xl mx-auto grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
+                    {catalogData.map((item, index) => (
+                        <div
+                            key={item.name}
+                            className={`bg-gray-100 dark:bg-gray-800 rounded-3xl p-4 flex flex-col items-center text-center transition-all duration-500 ease-out ${itemsVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-5'}`}
+                            style={{ transitionDelay: `${index * 75}ms` }}
+                        >
+                            <img
+                                src={item.image}
+                                alt={item.name}
+                                className="w-full h-32 sm:h-40 object-cover rounded-2xl mb-4 bg-gray-200 dark:bg-gray-700"
+                                loading="lazy"
+                            />
+                            <h3 className="flex-1 font-semibold text-gray-800 dark:text-gray-100 text-sm sm:text-base">{item.name}</h3>
+                            <p className="mt-2 text-blue-500 font-bold text-lg">{item.price}</p>
+                        </div>
+                    ))}
+                </div>
+            </main>
+        </>
+    );
+};
+
 // ExchangeRatePage: Fetches and displays JPY/BRL exchange rate, and manages the reference rate
 const ExchangeRatePage: React.FC<{
     goToHome: () => void;
@@ -747,5 +852,177 @@ const GlobalChatPage: React.FC<{ user: User; goToHome: () => void; }> = ({ user,
         </>
     );
 };
+
+// OrderPage component with a complete form
+const OrderPage: React.FC<{ goToHome: () => void; user: User; initialOrder: Order | null }> = ({ goToHome, user, initialOrder }) => {
+  const [isSaving, setIsSaving] = useState(false);
+  const [formData, setFormData] = useState({
+    PEDIDO_NUMERO: initialOrder?.PEDIDO_NUMERO || '',
+    PEDIDO_DATA: initialOrder?.PEDIDO_DATA || new Date().toISOString().split('T')[0],
+    VENDEDOR_NOME: initialOrder?.VENDEDOR_NOME || '',
+    TIPO_VENDA: initialOrder?.TIPO_VENDA || '',
+    CLIENTE_RAZAO_SOCIAL: initialOrder?.CLIENTE_RAZAO_SOCIAL || '',
+    CLIENTE_CNPJ: initialOrder?.CLIENTE_CNPJ || '',
+    CLIENTE_ENDERECO: initialOrder?.CLIENTE_ENDERECO || '',
+    CLIENTE_BAIRRO: initialOrder?.CLIENTE_BAIRRO || '',
+    CLIENTE_CEP: initialOrder?.CLIENTE_CEP || '',
+    CLIENTE_CIDADE: initialOrder?.CLIENTE_CIDADE || '',
+    CLIENTE_UF: initialOrder?.CLIENTE_UF || '',
+    CLIENTE_TELEFONE: initialOrder?.CLIENTE_TELEFONE || '',
+    CLIENTE_CONTATO_AC: initialOrder?.CLIENTE_CONTATO_AC || '',
+    TRANSPORTADORA: initialOrder?.TRANSPORTADORA || '',
+    PRODUTO_QUANTIDADE: initialOrder?.PRODUTO_QUANTIDADE || '1',
+    PRODUTO_DESCRICAO: initialOrder?.PRODUTO_DESCRICAO || '',
+    PEDIDO_VALOR_TOTAL: initialOrder?.PEDIDO_VALOR_TOTAL || '',
+    ENTREGA_PREVISAO_MES: initialOrder?.ENTREGA_PREVISAO_MES || '',
+    VENCIMENTO_DIA: initialOrder?.VENCIMENTO_DIA || '',
+    OBSERVACAO_GERAL: initialOrder?.OBSERVACAO_GERAL || ''
+  });
+
+  const isViewMode = !!initialOrder;
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSaving(true);
+    
+    const formElementId = 'order-form-container';
+    const fileName = `Pedido-${formData.PEDIDO_NUMERO || 'Novo'}`;
+
+    try {
+        if (!isViewMode) {
+             if (!user.email) throw new Error("Usuário sem e-mail.");
+             await saveOrder(user.uid, user.email, formData);
+        }
+        await generateOrderPdf(formElementId, fileName);
+        if (!isViewMode) {
+            alert("Pedido salvo e PDF gerado com sucesso!");
+        }
+    } catch (error) {
+        console.error("Falha ao processar o pedido:", error);
+        alert("Ocorreu um erro. Verifique o console para mais detalhes.");
+    } finally {
+        setIsSaving(false);
+    }
+  };
+
+  const inputClass = "w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-xl py-2 px-4 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-200 dark:disabled:bg-gray-800/50";
+  const labelClass = "block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1";
+  
+  return (
+    <>
+      <AppHeader title={isViewMode ? "Detalhes do Pedido" : "Gerar Pedido"} showBackButton onBackClick={goToHome} />
+      <main className="flex-1 overflow-y-auto p-4 sm:p-6">
+        <form onSubmit={handleSubmit} id="order-form-container" className="max-w-4xl mx-auto space-y-8 mb-24">
+            
+            <div className="bg-gray-100 dark:bg-gray-800 p-6 rounded-3xl">
+                <h2 className="text-xl font-semibold mb-4 border-b pb-2 border-gray-200 dark:border-gray-700">Dados do Pedido</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div><label htmlFor="PEDIDO_NUMERO" className={labelClass}>Nº Pedido</label><input type="text" name="PEDIDO_NUMERO" id="PEDIDO_NUMERO" value={formData.PEDIDO_NUMERO} onChange={handleInputChange} className={inputClass} disabled={isViewMode} /></div>
+                    <div><label htmlFor="PEDIDO_DATA" className={labelClass}>Data</label><input type="date" name="PEDIDO_DATA" id="PEDIDO_DATA" value={formData.PEDIDO_DATA} onChange={handleInputChange} className={inputClass} disabled={isViewMode} /></div>
+                    <div><label htmlFor="VENDEDOR_NOME" className={labelClass}>Vendedor</label><input type="text" name="VENDEDOR_NOME" id="VENDEDOR_NOME" value={formData.VENDEDOR_NOME} onChange={handleInputChange} className={inputClass} disabled={isViewMode} /></div>
+                    <div><label htmlFor="TIPO_VENDA" className={labelClass}>Tipo de Venda</label><input type="text" name="TIPO_VENDA" id="TIPO_VENDA" value={formData.TIPO_VENDA} onChange={handleInputChange} className={inputClass} disabled={isViewMode} /></div>
+                </div>
+            </div>
+
+            <div className="bg-gray-100 dark:bg-gray-800 p-6 rounded-3xl">
+                <h2 className="text-xl font-semibold mb-4 border-b pb-2 border-gray-200 dark:border-gray-700">Dados do Cliente</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="md:col-span-2"><label htmlFor="CLIENTE_RAZAO_SOCIAL" className={labelClass}>Razão Social</label><input type="text" name="CLIENTE_RAZAO_SOCIAL" id="CLIENTE_RAZAO_SOCIAL" value={formData.CLIENTE_RAZAO_SOCIAL} onChange={handleInputChange} className={inputClass} disabled={isViewMode} /></div>
+                    <div><label htmlFor="CLIENTE_CNPJ" className={labelClass}>CNPJ</label><input type="text" name="CLIENTE_CNPJ" id="CLIENTE_CNPJ" value={formData.CLIENTE_CNPJ} onChange={handleInputChange} className={inputClass} disabled={isViewMode} /></div>
+                    <div><label htmlFor="CLIENTE_TELEFONE" className={labelClass}>Telefone</label><input type="tel" name="CLIENTE_TELEFONE" id="CLIENTE_TELEFONE" value={formData.CLIENTE_TELEFONE} onChange={handleInputChange} className={inputClass} disabled={isViewMode} /></div>
+                    <div className="md:col-span-2"><label htmlFor="CLIENTE_ENDERECO" className={labelClass}>Endereço</label><input type="text" name="CLIENTE_ENDERECO" id="CLIENTE_ENDERECO" value={formData.CLIENTE_ENDERECO} onChange={handleInputChange} className={inputClass} disabled={isViewMode} /></div>
+                    <div><label htmlFor="CLIENTE_BAIRRO" className={labelClass}>Bairro</label><input type="text" name="CLIENTE_BAIRRO" id="CLIENTE_BAIRRO" value={formData.CLIENTE_BAIRRO} onChange={handleInputChange} className={inputClass} disabled={isViewMode} /></div>
+                    <div><label htmlFor="CLIENTE_CEP" className={labelClass}>CEP</label><input type="text" name="CLIENTE_CEP" id="CLIENTE_CEP" value={formData.CLIENTE_CEP} onChange={handleInputChange} className={inputClass} disabled={isViewMode} /></div>
+                    <div><label htmlFor="CLIENTE_CIDADE" className={labelClass}>Cidade</label><input type="text" name="CLIENTE_CIDADE" id="CLIENTE_CIDADE" value={formData.CLIENTE_CIDADE} onChange={handleInputChange} className={inputClass} disabled={isViewMode} /></div>
+                    <div><label htmlFor="CLIENTE_UF" className={labelClass}>UF</label><input type="text" name="CLIENTE_UF" id="CLIENTE_UF" value={formData.CLIENTE_UF} onChange={handleInputChange} className={inputClass} disabled={isViewMode} /></div>
+                    <div className="md:col-span-2"><label htmlFor="CLIENTE_CONTATO_AC" className={labelClass}>Contato (A/C)</label><input type="text" name="CLIENTE_CONTATO_AC" id="CLIENTE_CONTATO_AC" value={formData.CLIENTE_CONTATO_AC} onChange={handleInputChange} className={inputClass} disabled={isViewMode} /></div>
+                </div>
+            </div>
+
+            <div className="bg-gray-100 dark:bg-gray-800 p-6 rounded-3xl">
+                <h2 className="text-xl font-semibold mb-4 border-b pb-2 border-gray-200 dark:border-gray-700">Produto e Transporte</h2>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                     <div><label htmlFor="PRODUTO_QUANTIDADE" className={labelClass}>Quantidade</label><input type="number" name="PRODUTO_QUANTIDADE" id="PRODUTO_QUANTIDADE" value={formData.PRODUTO_QUANTIDADE} onChange={handleInputChange} className={inputClass} disabled={isViewMode} /></div>
+                     <div className="md:col-span-3"><label htmlFor="PRODUTO_DESCRICAO" className={labelClass}>Descrição do Produto</label><textarea name="PRODUTO_DESCRICAO" id="PRODUTO_DESCRICAO" value={formData.PRODUTO_DESCRICAO} onChange={handleInputChange} className={`${inputClass} h-24`} disabled={isViewMode}></textarea></div>
+                     <div className="md:col-span-4"><label htmlFor="TRANSPORTADORA" className={labelClass}>Transportadora</label><input type="text" name="TRANSPORTADORA" id="TRANSPORTADORA" value={formData.TRANSPORTADORA} onChange={handleInputChange} className={inputClass} disabled={isViewMode} /></div>
+                </div>
+            </div>
+
+            <div className="bg-gray-100 dark:bg-gray-800 p-6 rounded-3xl">
+                <h2 className="text-xl font-semibold mb-4 border-b pb-2 border-gray-200 dark:border-gray-700">Condições e Observações</h2>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div><label htmlFor="PEDIDO_VALOR_TOTAL" className={labelClass}>Valor Total (R$)</label><input type="text" name="PEDIDO_VALOR_TOTAL" id="PEDIDO_VALOR_TOTAL" value={formData.PEDIDO_VALOR_TOTAL} onChange={handleInputChange} className={inputClass} disabled={isViewMode} /></div>
+                    <div><label htmlFor="ENTREGA_PREVISAO_MES" className={labelClass}>Previsão de Entrega (Mês)</label><input type="text" name="ENTREGA_PREVISAO_MES" id="ENTREGA_PREVISAO_MES" value={formData.ENTREGA_PREVISAO_MES} onChange={handleInputChange} className={inputClass} disabled={isViewMode} /></div>
+                    <div><label htmlFor="VENCIMENTO_DIA" className={labelClass}>Vencimento (Dia)</label><input type="text" name="VENCIMENTO_DIA" id="VENCIMENTO_DIA" value={formData.VENCIMENTO_DIA} onChange={handleInputChange} className={inputClass} disabled={isViewMode} /></div>
+                    <div className="md:col-span-3"><label htmlFor="OBSERVACAO_GERAL" className={labelClass}>Observação Geral</label><textarea name="OBSERVACAO_GERAL" id="OBSERVACAO_GERAL" value={formData.OBSERVACAO_GERAL} onChange={handleInputChange} className={`${inputClass} h-24`} disabled={isViewMode}></textarea></div>
+                </div>
+            </div>
+
+            <div className="pt-4 flex justify-end">
+                <button type="submit" disabled={isSaving} className="w-full sm:w-auto flex justify-center py-3 px-8 border border-transparent rounded-full shadow-sm text-md font-bold text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950 focus:ring-blue-500 disabled:bg-gray-400 dark:disabled:bg-gray-600">
+                    {isSaving ? 'Processando...' : (isViewMode ? 'Baixar PDF Novamente' : 'Salvar e Gerar PDF')}
+                </button>
+            </div>
+        </form>
+      </main>
+    </>
+  );
+};
+
+
+const MyOrdersPage: React.FC<{ goToHome: () => void; user: User; onSelectOrder: (order: Order) => void; }> = ({ goToHome, user, onSelectOrder }) => {
+    const [orders, setOrders] = useState<Order[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        setIsLoading(true);
+        const unsubscribe = getOrdersListener(user.uid, (fetchedOrders) => {
+            setOrders(fetchedOrders);
+            setIsLoading(false);
+        });
+        return () => unsubscribe();
+    }, [user.uid]);
+
+    return (
+        <>
+            <AppHeader title="Meus Pedidos" showBackButton onBackClick={goToHome} />
+            <main className="flex-1 overflow-y-auto p-4 sm:p-6">
+                <div className="max-w-4xl mx-auto space-y-4">
+                    {isLoading && <p className="text-center text-gray-500 dark:text-gray-400 animate-pulse">Carregando pedidos...</p>}
+                    {!isLoading && orders.length === 0 && (
+                        <div className="text-center py-10 bg-gray-100 dark:bg-gray-800 rounded-3xl">
+                            <p className="text-lg text-gray-600 dark:text-gray-300">Você ainda não tem pedidos salvos.</p>
+                            <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">Crie um novo pedido na tela inicial.</p>
+                        </div>
+                    )}
+                    {orders.map(order => (
+                        <button
+                            key={order.id}
+                            onClick={() => onSelectOrder(order)}
+                            className="w-full flex items-center justify-between text-left p-4 bg-gray-100 dark:bg-gray-800 rounded-2xl hover:bg-gray-200 dark:hover:bg-gray-700/60 transition-colors"
+                        >
+                            <div>
+                                <p className="font-semibold text-gray-800 dark:text-gray-100">Pedido Nº: {order.PEDIDO_NUMERO || 'N/A'}</p>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">Cliente: {order.CLIENTE_RAZAO_SOCIAL}</p>
+                            </div>
+                            <div className="text-right">
+                                <p className="text-sm text-gray-500 dark:text-gray-400">
+                                    {order.createdAt ? new Date(order.createdAt.seconds * 1000).toLocaleDateString('pt-BR') : ''}
+                                </p>
+                                <span className="text-blue-500 text-sm font-semibold">Ver Detalhes</span>
+                            </div>
+                        </button>
+                    ))}
+                </div>
+            </main>
+        </>
+    );
+};
+
 
 export default App;

@@ -8,14 +8,16 @@ import {
     limit,
     doc,
     runTransaction,
+    where,
 } from "firebase/firestore";
 import { db } from "./firebase";
-import { GlobalChatMessage, ExchangeRateHistoryEntry } from "../types";
+import { GlobalChatMessage, ExchangeRateHistoryEntry, Order } from "../types";
 
 const GLOBAL_CHAT_COLLECTION = 'global_chat';
 const APP_CONFIG_COLLECTION = 'app_config';
 const EXCHANGE_RATE_DOC_ID = 'exchange_rate';
 const HISTORY_SUBCOLLECTION = 'history';
+const ORDERS_COLLECTION = 'orders';
 
 // Send a new message to the global chat
 export const sendGlobalMessage = async (
@@ -142,6 +144,57 @@ export const getExchangeRateHistoryListener = (
         callback(historyEntries);
     }, (error) => {
         console.error("Error fetching exchange rate history:", error);
+        callback([]);
+    });
+
+    return unsubscribe;
+};
+
+// Save a new order to the database
+export const saveOrder = async (
+    userId: string,
+    userEmail: string,
+    orderData: Omit<Order, 'id' | 'userId' | 'userEmail' | 'createdAt'>
+): Promise<void> => {
+    try {
+        await addDoc(collection(db, ORDERS_COLLECTION), {
+            ...orderData,
+            userId,
+            userEmail,
+            createdAt: serverTimestamp(),
+        });
+    } catch (error) {
+        console.error("Error saving order:", error);
+        throw error;
+    }
+};
+
+// Listen for real-time updates on a user's orders
+export const getOrdersListener = (
+    userId: string,
+    callback: (orders: Order[]) => void
+) => {
+    const q = query(
+        collection(db, ORDERS_COLLECTION),
+        where('userId', '==', userId),
+        orderBy('createdAt', 'desc')
+    );
+
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+        const orders = querySnapshot.docs.map(doc => {
+            const data = doc.data();
+            const createdAtTimestamp = data.createdAt;
+            const createdAt = createdAtTimestamp ? { seconds: createdAtTimestamp.seconds, nanoseconds: createdAtTimestamp.nanoseconds } : null;
+
+            return {
+                id: doc.id,
+                ...data,
+                createdAt: createdAt,
+            } as Order;
+        });
+        callback(orders);
+    }, (error) => {
+        console.error("Error fetching orders:", error);
         callback([]);
     });
 
