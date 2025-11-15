@@ -207,7 +207,7 @@ const HomePage: React.FC<{ user: User; setView: (view: View) => void; theme: The
 
   const cardItems = [
       { onClick: () => setView('models'), title: "Modelos e Preços", description: "Veja todos os modelos disponíveis." },
-      { onClick: () => setView('chat'), title: "Assistente de Chat", description: "Tire suas dúvidas sobre bordados com a IA." },
+      { onClick: () => setView('chat'), title: "Pesquise com Barudex", description: "Tire suas dúvidas sobre bordados com a IA." },
       { onClick: () => setView('global-chat'), title: "Bate-Papo (Recados)", description: "Deixe uma mensagem para outros usuários." },
       { onClick: () => setView('exchange-rate'), title: "Taxa JPY/BRL", description: "Consulte e defina a cotação do Iene." },
   ];
@@ -631,7 +631,7 @@ const ExchangeRatePage: React.FC<{
 // ChatPage: New page for the chat functionality
 const ChatPage: React.FC<{ user: User; goToHome: () => void; theme: Theme; toggleTheme: () => void; }> = ({ user, goToHome, theme, toggleTheme }) => {
   const [messages, setMessages] = useState<Message[]>([
-    { sender: MessageSender.AI, text: "Olá! Sou seu assistente de máquinas de bordado. Em que posso ajudar?" },
+    { sender: MessageSender.AI, text: "Olá! Eu sou Barudex, o assistente virtual da Barudan do Brasil. Como posso te ajudar hoje?" },
   ]);
   const [isLoading, setIsLoading] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -662,7 +662,7 @@ const ChatPage: React.FC<{ user: User; goToHome: () => void; theme: Theme; toggl
 
   return (
     <>
-      <AppHeader title="Assistente de Chat" user={user} showBackButton onBackClick={goToHome} theme={theme} toggleTheme={toggleTheme} />
+      <AppHeader title="Pesquise com Barudex" user={user} showBackButton onBackClick={goToHome} theme={theme} toggleTheme={toggleTheme} />
       <main className="flex-1 overflow-y-auto p-4 md:p-6 flex flex-col">
         <div className="flex-1 space-y-6 max-w-4xl mx-auto w-full">
           {messages.map((msg, index) => (
