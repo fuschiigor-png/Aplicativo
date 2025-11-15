@@ -8,6 +8,7 @@ import ChatMessage from './components/ChatMessage';
 import GlobalChatMessage from './components/GlobalChatMessage';
 import { generateChatResponse, getExchangeRate } from './services/geminiService';
 import { getMessagesListener, sendGlobalMessage, getExchangeRateConfigListener, getExchangeRateHistoryListener, updateExchangeRateConfig } from './services/chatService';
+import { BarudexIcon, MoonIcon, SunIcon, ModelsIcon, GlobalChatIcon, ExchangeRateIcon, LogoutIcon } from './components/Icons';
 
 type Theme = 'light' | 'dark';
 
@@ -39,7 +40,7 @@ const App: React.FC = () => {
           document.body.className = 'bg-gray-950';
       } else {
           document.documentElement.classList.remove('dark');
-          document.body.className = 'bg-white';
+          document.body.className = 'bg-gradient-to-b from-blue-100 to-white';
       }
       localStorage.setItem('theme', theme);
   }, [theme]);
@@ -99,47 +100,50 @@ const MainDashboard: React.FC<{ user: User; theme: Theme; toggleTheme: () => voi
 
   return (
     <div className="flex flex-col h-screen text-gray-800 dark:text-gray-200 font-sans">
-      {view === 'home' && <HomePage user={user} setView={setView} theme={theme} toggleTheme={toggleTheme} />}
-      {view === 'models' && <MachineModelsPage user={user} goToHome={goToHome} referenceRate={referenceRate} theme={theme} toggleTheme={toggleTheme} />}
-      {view === 'chat' && <ChatPage user={user} goToHome={goToHome} theme={theme} toggleTheme={toggleTheme} />}
-      {view === 'global-chat' && <GlobalChatPage user={user} goToHome={goToHome} theme={theme} toggleTheme={toggleTheme} />}
-      {view === 'exchange-rate' && <ExchangeRatePage user={user} goToHome={goToHome} savedReferenceRate={referenceRate} history={exchangeRateHistory} onUpdateReferenceRate={handleUpdateReferenceRate} theme={theme} toggleTheme={toggleTheme} />}
+      {view === 'home' && <HomePage setView={setView} />}
+      {view === 'models' && <MachineModelsPage goToHome={goToHome} referenceRate={referenceRate} />}
+      {view === 'chat' && <ChatPage goToHome={goToHome} />}
+      {view === 'global-chat' && <GlobalChatPage user={user} goToHome={goToHome} />}
+      {view === 'exchange-rate' && <ExchangeRatePage goToHome={goToHome} savedReferenceRate={referenceRate} history={exchangeRateHistory} onUpdateReferenceRate={handleUpdateReferenceRate} />}
+      
+      {/* Floating Action Buttons Container */}
+      <div className="fixed bottom-0 left-0 right-0 p-4 sm:p-6 flex justify-center z-20 pointer-events-none">
+        
+        {/* Theme Toggle Button (Center) */}
+        <div className="pointer-events-auto">
+            <button
+                onClick={toggleTheme}
+                className="p-3 rounded-full bg-gray-200/80 dark:bg-gray-800/80 backdrop-blur-md shadow-lg text-gray-600 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950 focus:ring-blue-500 transition-transform duration-300 ease-in-out hover:scale-110"
+                aria-label="Toggle theme"
+            >
+                {theme === 'light' ? <MoonIcon /> : <SunIcon />}
+            </button>
+        </div>
+        
+        {/* Logout Button (Bottom Right) */}
+        <div className="absolute bottom-4 right-4 sm:bottom-6 sm:right-6 pointer-events-auto">
+            <button
+                onClick={handleSignOut}
+                className="p-3 rounded-full bg-red-600/90 backdrop-blur-md shadow-lg text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950 focus:ring-red-500 transition-transform duration-300 ease-in-out hover:scale-110"
+                aria-label="Sair"
+            >
+                <LogoutIcon className="w-6 h-6" />
+            </button>
+        </div>
+      </div>
     </div>
   );
 };
 
-// Icons for Theme Toggle
-const SunIcon = () => (
-  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
-);
-
-const MoonIcon = () => (
-  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>
-);
-
-
 // Reusable Header Component
 const AppHeader: React.FC<{
   title: string;
-  user: User;
   showBackButton?: boolean;
   onBackClick?: () => void;
-  theme: Theme;
-  toggleTheme: () => void;
-}> = ({ title, user, showBackButton, onBackClick, theme, toggleTheme }) => {
-  const [isThemeButtonAnimating, setIsThemeButtonAnimating] = useState(false);
-
-  const handleThemeToggleClick = () => {
-    toggleTheme();
-    setIsThemeButtonAnimating(true);
-    setTimeout(() => {
-        setIsThemeButtonAnimating(false);
-    }, 300); // Animation duration should match transition duration
-  };
-
+}> = ({ title, showBackButton, onBackClick }) => {
   return (
-    <header className="bg-transparent p-4 flex justify-between items-center sticky top-0 z-10">
-      <div className="absolute left-4">
+    <header className="bg-white/70 dark:bg-gray-950/70 backdrop-blur-md p-4 flex justify-between items-center sticky top-0 z-10">
+      <div className="flex-1 flex justify-start">
         {showBackButton && (
           <button
             onClick={onBackClick}
@@ -152,80 +156,73 @@ const AppHeader: React.FC<{
         )}
       </div>
 
-      <h1 className="text-3xl font-extrabold bg-gradient-to-r from-blue-500 via-green-400 to-yellow-400 text-transparent bg-clip-text mx-auto text-center px-16">
+      <h1 className="text-3xl font-extrabold bg-gradient-to-r from-blue-500 via-green-400 to-yellow-400 text-transparent bg-clip-text text-center mx-4 truncate">
         {title}
       </h1>
 
-      <div className="absolute right-4 flex items-center gap-4">
-        <span className="text-sm text-gray-500 dark:text-gray-400 hidden sm:block truncate max-w-xs" title={user.email ?? ''}>{user.email}</span>
-        
-        <button
-          onClick={handleThemeToggleClick}
-          className={`p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950 focus:ring-blue-500 transition-transform duration-300 ease-in-out ${isThemeButtonAnimating ? 'scale-125' : 'scale-100'}`}
-          aria-label="Toggle theme"
-        >
-          {theme === 'light' ? <MoonIcon /> : <SunIcon />}
-        </button>
-
-        <button
-          onClick={handleSignOut}
-          className="bg-gray-700 hover:bg-gray-800 dark:bg-gray-600 dark:hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950 focus:ring-gray-500"
-          aria-label="Sair"
-        >
-         Sair
-        </button>
-      </div>
+      <div className="flex-1"></div> {/* Spacer div */}
     </header>
   );
 };
 
 
-// Reusable HomeCard component
-const HomeCard: React.FC<{
-    onClick: () => void;
-    title: string;
-    description: string;
-}> = ({ onClick, title, description }) => (
-    <div 
-        onClick={onClick} 
-        className="bg-gray-100 dark:bg-gray-800 p-8 rounded-3xl cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-all duration-300 text-center w-full sm:w-80 flex flex-col justify-center"
-    >
-        <h3 className="text-2xl font-semibold text-gray-900 dark:text-white mb-2">{title}</h3>
-        <p className="text-gray-500 dark:text-gray-400">{description}</p>
-    </div>
-);
-
-
 // HomePage: The main landing page after login
-const HomePage: React.FC<{ user: User; setView: (view: View) => void; theme: Theme; toggleTheme: () => void }> = ({ user, setView, theme, toggleTheme }) => {
-  const [cardsVisible, setCardsVisible] = useState(false);
+const HomePage: React.FC<{ setView: (view: View) => void; }> = ({ setView }) => {
+  const [buttonsVisible, setButtonsVisible] = useState(false);
   
   useEffect(() => {
-    const timer = setTimeout(() => setCardsVisible(true), 100);
+    const timer = setTimeout(() => setButtonsVisible(true), 100);
     return () => clearTimeout(timer);
   }, []);
 
-  const cardItems = [
-      { onClick: () => setView('models'), title: "Modelos e Preços", description: "Veja todos os modelos disponíveis." },
-      { onClick: () => setView('chat'), title: "Pesquise com Barudex", description: "Tire suas dúvidas sobre bordados com a IA." },
-      { onClick: () => setView('global-chat'), title: "Bate-Papo (Recados)", description: "Deixe uma mensagem para outros usuários." },
-      { onClick: () => setView('exchange-rate'), title: "Taxa JPY/BRL", description: "Consulte e defina a cotação do Iene." },
+  const navItems = [
+      { 
+        onClick: () => setView('models'), 
+        title: "Modelos e Preços", 
+        icon: <ModelsIcon className="w-9 h-9 text-blue-600 dark:text-blue-400" />,
+        color: "bg-blue-100 dark:bg-blue-900/40 hover:bg-blue-200 dark:hover:bg-blue-900/80"
+      },
+      { 
+        onClick: () => setView('chat'), 
+        title: "Pesquise com Barudex", 
+        icon: <BarudexIcon className="w-10 h-10" />,
+        color: "bg-cyan-100 dark:bg-cyan-900/40 hover:bg-cyan-200 dark:hover:bg-cyan-900/80"
+      },
+      { 
+        onClick: () => setView('global-chat'), 
+        title: "Bate-Papo", 
+        icon: <GlobalChatIcon className="w-9 h-9 text-green-600 dark:text-green-400" />,
+        color: "bg-green-100 dark:bg-green-900/40 hover:bg-green-200 dark:hover:bg-green-900/80"
+      },
+      { 
+        onClick: () => setView('exchange-rate'), 
+        title: "Taxa JPY/BRL", 
+        icon: <ExchangeRateIcon className="w-9 h-9 text-amber-600 dark:text-amber-400" />,
+        color: "bg-amber-100 dark:bg-amber-900/40 hover:bg-amber-200 dark:hover:bg-amber-900/80"
+      },
   ];
 
   return (
     <>
-      <AppHeader title="Lista de preços Barudan do Brasil" user={user} theme={theme} toggleTheme={toggleTheme} />
+      <AppHeader title="Lista de preços Barudan do Brasil" />
       <main className="flex flex-col items-center justify-center flex-1 p-6">
-        <h2 className="text-6xl lg:text-8xl font-black text-gray-900 dark:text-white mb-2 text-center">Bem-vindo!</h2>
-        <p className="text-xl text-gray-500 dark:text-gray-400 mb-16 text-center">Explore nosso catálogo ou converse com nosso assistente.</p>
-        <div className="flex flex-wrap justify-center gap-8 w-full max-w-5xl">
-            {cardItems.map((card, index) => (
+        <div className="flex flex-wrap justify-center items-start gap-x-8 gap-y-12 w-full max-w-3xl">
+            {navItems.map((item, index) => (
                 <div 
-                    key={card.title} 
-                    className={`transition-all duration-500 ease-out ${cardsVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-5'}`} 
+                    key={item.title} 
+                    className={`transition-all duration-500 ease-out ${buttonsVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-5'}`} 
                     style={{ transitionDelay: `${index * 100}ms`}}
                 >
-                    <HomeCard {...card} />
+                    <button 
+                      onClick={item.onClick}
+                      className="flex flex-col items-center gap-3 text-center w-40 group"
+                      aria-label={item.title}
+                    >
+                      <div className={`w-24 h-24 rounded-full flex items-center justify-center transition-all duration-300 group-hover:scale-110 ${item.color}`}>
+                        {item.icon}
+                      </div>
+                      <span className="font-semibold text-gray-700 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{item.title}</span>
+                    </button>
                 </div>
             ))}
         </div>
@@ -370,7 +367,7 @@ const machineData: Record<string, { name: string; type: string; price: string; d
 const productTypes = Object.keys(machineData);
 
 // MachineModelsPage: Displays specific models and prices with interactive selectors
-const MachineModelsPage: React.FC<{ user: User; goToHome: () => void; referenceRate: number | null; theme: Theme; toggleTheme: () => void; }> = ({ user, goToHome, referenceRate, theme, toggleTheme }) => {
+const MachineModelsPage: React.FC<{ goToHome: () => void; referenceRate: number | null; }> = ({ goToHome, referenceRate }) => {
     const [selectedProduct, setSelectedProduct] = useState<string>('');
     const [selectedModelName, setSelectedModelName] = useState<string>('');
     const [isAnimatingDetails, setIsAnimatingDetails] = useState(false);
@@ -410,7 +407,7 @@ const MachineModelsPage: React.FC<{ user: User; goToHome: () => void; referenceR
 
     return (
         <>
-            <AppHeader title="Modelos e Preços" user={user} showBackButton onBackClick={goToHome} theme={theme} toggleTheme={toggleTheme} />
+            <AppHeader title="Modelos e Preços" showBackButton onBackClick={goToHome} />
             <main className="flex-1 overflow-y-auto p-6">
                 <div className="max-w-4xl mx-auto space-y-8">
                     {/* Selectors */}
@@ -479,14 +476,11 @@ const MachineModelsPage: React.FC<{ user: User; goToHome: () => void; referenceR
 
 // ExchangeRatePage: Fetches and displays JPY/BRL exchange rate, and manages the reference rate
 const ExchangeRatePage: React.FC<{
-    user: User;
     goToHome: () => void;
     savedReferenceRate: number | null;
     history: ExchangeRateHistoryEntry[];
     onUpdateReferenceRate: (newRate: number) => Promise<void>;
-    theme: Theme;
-    toggleTheme: () => void;
-}> = ({ user, goToHome, savedReferenceRate, history, onUpdateReferenceRate, theme, toggleTheme }) => {
+}> = ({ goToHome, savedReferenceRate, history, onUpdateReferenceRate }) => {
     const [currentRate, setCurrentRate] = useState<number | null>(null);
     const [inputRate, setInputRate] = useState('');
     const [isLoading, setIsLoading] = useState(true);
@@ -558,7 +552,7 @@ const ExchangeRatePage: React.FC<{
 
     return (
         <>
-            <AppHeader title="Cotação JPY/BRL" user={user} showBackButton onBackClick={goToHome} theme={theme} toggleTheme={toggleTheme} />
+            <AppHeader title="Cotação JPY/BRL" showBackButton onBackClick={goToHome} />
             <main className="flex-1 overflow-y-auto p-6 flex flex-col items-center">
                 <div className={`w-full max-w-lg bg-gray-100 dark:bg-gray-800 p-8 rounded-3xl space-y-6 mb-8 transition-all duration-500 ease-out ${isContentVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-5'}`}>
                     {isLoading && <p className="text-center text-gray-500 dark:text-gray-400 animate-pulse">Buscando cotação atual...</p>}
@@ -629,7 +623,7 @@ const ExchangeRatePage: React.FC<{
 
 
 // ChatPage: New page for the chat functionality
-const ChatPage: React.FC<{ user: User; goToHome: () => void; theme: Theme; toggleTheme: () => void; }> = ({ user, goToHome, theme, toggleTheme }) => {
+const ChatPage: React.FC<{ goToHome: () => void; }> = ({ goToHome }) => {
   const [messages, setMessages] = useState<Message[]>([
     { sender: MessageSender.AI, text: "Olá! Eu sou Barudex, o assistente virtual da Barudan do Brasil. Como posso te ajudar hoje?" },
   ]);
@@ -662,7 +656,7 @@ const ChatPage: React.FC<{ user: User; goToHome: () => void; theme: Theme; toggl
 
   return (
     <>
-      <AppHeader title="Pesquise com Barudex" user={user} showBackButton onBackClick={goToHome} theme={theme} toggleTheme={toggleTheme} />
+      <AppHeader title="Pesquise com Barudex" showBackButton onBackClick={goToHome} />
       <main className="flex-1 overflow-y-auto p-4 md:p-6 flex flex-col">
         <div className="flex-1 space-y-6 max-w-4xl mx-auto w-full">
           {messages.map((msg, index) => (
@@ -681,7 +675,7 @@ const ChatPage: React.FC<{ user: User; goToHome: () => void; theme: Theme; toggl
 
 
 // GlobalChatPage: New page for the real-time global chat
-const GlobalChatPage: React.FC<{ user: User; goToHome: () => void; theme: Theme; toggleTheme: () => void; }> = ({ user, goToHome, theme, toggleTheme }) => {
+const GlobalChatPage: React.FC<{ user: User; goToHome: () => void; }> = ({ user, goToHome }) => {
     const [messages, setMessages] = useState<GlobalChatMessageType[]>([]);
     const [newMessage, setNewMessage] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -716,7 +710,7 @@ const GlobalChatPage: React.FC<{ user: User; goToHome: () => void; theme: Theme;
 
     return (
         <>
-            <AppHeader title="Bate-Papo (Recados)" user={user} showBackButton onBackClick={goToHome} theme={theme} toggleTheme={toggleTheme} />
+            <AppHeader title="Bate-Papo (Recados)" showBackButton onBackClick={goToHome} />
             <main className="flex-1 flex flex-col overflow-hidden p-4 md:p-6">
                 <div className="flex-1 space-y-4 overflow-y-auto max-w-4xl mx-auto w-full p-2">
                     {messages.map((msg) => (

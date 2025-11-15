@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Message, MessageSender } from '../types';
+import { BarudexIcon } from './Icons';
 
 interface ChatMessageProps {
   message: Message;
@@ -15,6 +16,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
   }, []);
 
   const isUser = sender === MessageSender.USER;
+  const isAI = sender === MessageSender.AI;
   const isError = sender === MessageSender.ERROR;
 
   const containerClasses = isUser ? 'justify-end' : 'justify-start';
@@ -37,6 +39,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
 
   return (
     <div className={`flex items-start gap-3 ${containerClasses} transition-all duration-500 ease-out ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
+      {isAI && <BarudexIcon className="w-8 h-8 mt-1" />}
       <div
         className={`max-w-md lg:max-w-lg xl:max-w-2xl px-4 py-3 rounded-2xl shadow-sm ${bubbleClasses}`}
       >
