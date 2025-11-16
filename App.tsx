@@ -10,7 +10,7 @@ import ChatMessage from './components/ChatMessage';
 import GlobalChatMessage from './components/GlobalChatMessage';
 import { generateChatResponse, getExchangeRate } from './services/geminiService';
 import { getMessagesListener, sendGlobalMessage, getExchangeRateConfigListener, getExchangeRateHistoryListener, updateExchangeRateConfig, saveOrder, getOrdersListener, deleteOrder, getNextOrderNumber, deleteAllOrdersAndResetCounter } from './services/chatService';
-import { BarudexIcon, MoonIcon, SunIcon, ModelsIcon, GlobalChatIcon, ExchangeRateIcon, LogoutIcon, DocumentIcon, HistoryIcon, TrashIcon } from './components/Icons';
+import { BarudexIcon, MoonIcon, SunIcon, ModelsIcon, GlobalChatIcon, ExchangeRateIcon, LogoutIcon, DocumentIcon, HistoryIcon, TrashIcon, CartIcon, BookIcon, CurrencyIcon } from './components/Icons';
 import { generateOrderPdf } from './services/pdfService';
 
 type Theme = 'light' | 'dark';
@@ -184,81 +184,112 @@ const AppHeader: React.FC<{
 
 // HomePage: The main landing page after login
 const HomePage: React.FC<{ setView: (view: View) => void; onNewOrderClick: () => void; }> = ({ setView, onNewOrderClick }) => {
-  const [buttonsVisible, setButtonsVisible] = useState(false);
-  
-  useEffect(() => {
-    const timer = setTimeout(() => setButtonsVisible(true), 100);
-    return () => clearTimeout(timer);
-  }, []);
-
-  const navItems = [
-      { 
-        onClick: () => setView('models'), 
-        title: "Modelos e Preços", 
-        description: "Consulte especificações e valores",
-        icon: <ModelsIcon className="w-6 h-6 text-white" />,
-        iconBgColor: "bg-blue-600"
-      },
-      { 
-        onClick: () => setView('chat'), 
-        title: "Pesquise com Barudex", 
-        description: "Tire suas dúvidas com nosso assistente",
-        icon: <BarudexIcon className="w-6 h-6" />,
-        iconBgColor: "bg-cyan-500"
-      },
-      { 
-        onClick: () => setView('global-chat'), 
-        title: "Bate-Papo", 
-        description: "Deixe um recado para a equipe",
-        icon: <GlobalChatIcon className="w-6 h-6 text-white" />,
-        iconBgColor: "bg-green-500"
-      },
-      { 
-        onClick: () => setView('exchange-rate'), 
-        title: "Taxa JPY/BRL", 
-        description: "Ajuste a taxa de precificação",
-        icon: <ExchangeRateIcon className="w-6 h-6 text-white" />,
-        iconBgColor: "bg-amber-500"
-      },
-      { 
-        onClick: onNewOrderClick, 
-        title: "Gerar Pedido", 
-        description: "Crie um novo pedido de compra",
-        icon: <DocumentIcon className="w-6 h-6 text-white" />,
-        iconBgColor: "bg-purple-500"
-      },
-      { 
-        onClick: () => setView('my-orders'), 
-        title: "Meus Pedidos", 
-        description: "Consulte seus pedidos salvos",
-        icon: <HistoryIcon className="w-6 h-6 text-white" />,
-        iconBgColor: "bg-pink-500"
-      },
+  const sections = [
+    {
+      title: 'Pedidos',
+      items: [
+        {
+          title: "Novo Pedido",
+          description: "Crie um novo pedido de compra.",
+          icon: <CartIcon className="w-6 h-6 text-white" />,
+          onClick: onNewOrderClick,
+          color: 'purple'
+        },
+        {
+          title: "Histórico de Pedidos",
+          description: "Visualize, edite ou duplique seus pedidos salvos.",
+          icon: <HistoryIcon className="w-6 h-6 text-white" />,
+          onClick: () => setView('my-orders'),
+          color: 'purple'
+        },
+      ]
+    },
+    {
+      title: 'Suporte e Informações',
+      items: [
+        {
+          title: "Catálogo de Produtos",
+          description: "Consulte especificações e valores dos nossos modelos.",
+          icon: <BookIcon className="w-6 h-6 text-white" />,
+          onClick: () => setView('models'),
+          color: 'green'
+        },
+        {
+          title: "Pesquise com Barudex",
+          description: "Tire suas dúvidas com nosso assistente inteligente.",
+          icon: <BarudexIcon className="w-6 h-6" />,
+          onClick: () => setView('chat'),
+          color: 'green'
+        },
+        {
+          title: "Fale com Equipe",
+          description: "Envie mensagens ou solicite suporte direto à nossa equipe.",
+          icon: <GlobalChatIcon className="w-6 h-6 text-white" />,
+          onClick: () => setView('global-chat'),
+          color: 'green'
+        },
+      ]
+    },
+    {
+      title: 'Administrativo',
+      items: [
+        {
+          title: "Ajuste da Taxa ($)",
+          description: "Gerencie e atualize a taxa cambial de precificação.",
+          icon: <CurrencyIcon className="w-6 h-6 text-white" />,
+          onClick: () => setView('exchange-rate'),
+          color: 'amber'
+        },
+      ]
+    }
   ];
+
+  const colorClasses = {
+    purple: {
+      card: 'bg-purple-50 dark:bg-purple-900/30 hover:bg-purple-100 dark:hover:bg-purple-900/50',
+      icon: 'bg-purple-500'
+    },
+    green: {
+      card: 'bg-green-50 dark:bg-green-900/30 hover:bg-green-100 dark:hover:bg-green-900/50',
+      icon: 'bg-green-500'
+    },
+    amber: {
+      card: 'bg-amber-50 dark:bg-amber-900/30 hover:bg-amber-100 dark:hover:bg-amber-900/50',
+      icon: 'bg-amber-500'
+    }
+  };
 
   return (
     <>
-      <AppHeader title="Lista de preços Barudan" />
-      <main className="flex flex-col items-center flex-1 p-4 sm:p-6">
-        <div className="w-full max-w-2xl space-y-3">
-            {navItems.map((item, index) => (
-                <button 
-                    key={item.title}
-                    onClick={item.onClick}
-                    className={`w-full flex items-center gap-4 text-left p-3 rounded-3xl bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700/60 active:bg-gray-300/80 dark:active:bg-gray-900/60 active:scale-[0.98] transform transition-all duration-200 ease-out ${buttonsVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-5'}`}
-                    style={{ transitionDelay: `${index * 100}ms` }}
-                    aria-label={item.title}
-                >
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${item.iconBgColor}`}>
+      <AppHeader title="Central de Pedidos e Suporte Barudan" />
+      <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+        <div className="max-w-6xl mx-auto space-y-10">
+          {sections.map((section) => (
+            <section key={section.title}>
+              <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200 mb-4">{section.title}</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                {section.items.map((item) => {
+                  const colors = colorClasses[item.color as keyof typeof colorClasses];
+                  return (
+                    <button
+                      key={item.title}
+                      onClick={item.onClick}
+                      className={`w-full p-5 rounded-2xl shadow-md hover:shadow-lg transform hover:-translate-y-1 transition-all duration-300 ease-in-out text-left flex items-center gap-4 ${colors.card}`}
+                      aria-label={item.title}
+                    >
+                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${colors.icon}`}>
                         {item.icon}
-                    </div>
-                    <div className="flex-1">
-                        <h2 className="text-md font-semibold text-gray-800 dark:text-gray-100">{item.title}</h2>
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="text-md font-semibold text-gray-800 dark:text-gray-100">{item.title}</h3>
                         <p className="text-sm text-gray-500 dark:text-gray-400">{item.description}</p>
-                    </div>
-                    <svg className="w-5 h-5 ml-auto text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
-                </button>
-            ))}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+          ))}
         </div>
       </main>
     </>
@@ -1033,11 +1064,11 @@ const MyOrdersPage: React.FC<{ goToHome: () => void; user: User; onSelectOrder: 
                     {orders.map(order => (
                         <div
                             key={order.id}
-                            className="w-full flex items-center justify-between text-left p-4 bg-gray-100 dark:bg-gray-800 rounded-2xl hover:bg-gray-200 dark:hover:bg-gray-700/60 transition-colors"
+                            className="w-full flex items-center justify-between text-left p-4 bg-gray-100 dark:bg-gray-800 rounded-2xl"
                         >
                             <div
                                 onClick={() => onSelectOrder(order)}
-                                className="flex-1 flex items-center justify-between text-left cursor-pointer"
+                                className="flex-1 flex items-center justify-between text-left cursor-pointer hover:bg-gray-200/50 dark:hover:bg-gray-700/60 -m-4 p-4 rounded-l-2xl transition-colors"
                                 role="button"
                                 tabIndex={0}
                                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onSelectOrder(order); }}
