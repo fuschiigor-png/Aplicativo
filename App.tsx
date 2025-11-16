@@ -10,7 +10,7 @@ import ChatMessage from './components/ChatMessage';
 import GlobalChatMessage from './components/GlobalChatMessage';
 import { generateChatResponse, getExchangeRate } from './services/geminiService';
 import { getMessagesListener, sendGlobalMessage, getExchangeRateConfigListener, getExchangeRateHistoryListener, updateExchangeRateConfig, saveOrder, getOrdersListener, deleteOrder, getNextOrderNumber, deleteAllOrdersAndResetCounter } from './services/chatService';
-import { BarudexIcon, MoonIcon, SunIcon, ModelsIcon, GlobalChatIcon, ExchangeRateIcon, LogoutIcon, DocumentIcon, HistoryIcon, CatalogIcon, TrashIcon } from './components/Icons';
+import { BarudexIcon, MoonIcon, SunIcon, ModelsIcon, GlobalChatIcon, ExchangeRateIcon, LogoutIcon, DocumentIcon, HistoryIcon, TrashIcon } from './components/Icons';
 import { generateOrderPdf } from './services/pdfService';
 
 type Theme = 'light' | 'dark';
@@ -64,7 +64,7 @@ const App: React.FC = () => {
 };
 
 // MainDashboard: Handles navigation between Home, Chat, and other views
-type View = 'home' | 'models' | 'chat' | 'global-chat' | 'exchange-rate' | 'order' | 'my-orders' | 'catalog';
+type View = 'home' | 'models' | 'chat' | 'global-chat' | 'exchange-rate' | 'order' | 'my-orders';
 
 const MainDashboard: React.FC<{ user: User; theme: Theme; toggleTheme: () => void; }> = ({ user, theme, toggleTheme }) => {
   const [view, setView] = useState<View>('home');
@@ -121,7 +121,6 @@ const MainDashboard: React.FC<{ user: User; theme: Theme; toggleTheme: () => voi
       {view === 'exchange-rate' && <ExchangeRatePage goToHome={goToHome} savedReferenceRate={referenceRate} history={exchangeRateHistory} onUpdateReferenceRate={handleUpdateReferenceRate} />}
       {view === 'order' && <OrderPage goToHome={goToHome} user={user} initialOrder={selectedOrder} />}
       {view === 'my-orders' && <MyOrdersPage goToHome={goToHome} user={user} onSelectOrder={handleSelectOrder} />}
-      {view === 'catalog' && <CatalogPage goToHome={goToHome} />}
       
       {/* Floating Action Buttons Container */}
       <div className="fixed bottom-0 left-0 right-0 p-4 sm:p-6 flex justify-center z-20 pointer-events-none">
@@ -201,13 +200,6 @@ const HomePage: React.FC<{ setView: (view: View) => void; onNewOrderClick: () =>
         iconBgColor: "bg-blue-600"
       },
       { 
-        onClick: () => setView('catalog'), 
-        title: "Catálogo", 
-        description: "Insumos e acessórios para bordado",
-        icon: <CatalogIcon className="w-6 h-6 text-white" />,
-        iconBgColor: "bg-teal-500"
-      },
-      { 
         onClick: () => setView('chat'), 
         title: "Pesquise com Barudex", 
         description: "Tire suas dúvidas com nosso assistente",
@@ -253,7 +245,7 @@ const HomePage: React.FC<{ setView: (view: View) => void; onNewOrderClick: () =>
                 <button 
                     key={item.title}
                     onClick={item.onClick}
-                    className={`w-full flex items-center gap-4 text-left p-3 rounded-3xl bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700/60 active:bg-gray-300/80 dark:active:bg-gray-900/60 transition-all duration-500 ease-out ${buttonsVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-5'}`}
+                    className={`w-full flex items-center gap-4 text-left p-3 rounded-3xl bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700/60 active:bg-gray-300/80 dark:active:bg-gray-900/60 active:scale-[0.98] transform transition-all duration-200 ease-out ${buttonsVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-5'}`}
                     style={{ transitionDelay: `${index * 100}ms` }}
                     aria-label={item.title}
                 >
@@ -510,75 +502,6 @@ const MachineModelsPage: React.FC<{ goToHome: () => void; referenceRate: number 
                             </div>
                         </div>
                     )}
-                </div>
-            </main>
-        </>
-    );
-};
-
-// CatalogPage: Displays a grid of products
-const catalogData = [
-    {
-      name: 'Linha de Bordar Ricamare',
-      price: 'R$ 15,00',
-      image: 'https://i.ibb.co/6gYCFyN/linha-ricamare.jpg'
-    },
-    {
-      name: 'Agulhas Groz-Beckert',
-      price: 'R$ 150,00',
-      image: 'https://i.ibb.co/pwns0yV/agulha-groz-beckert.jpg'
-    },
-    {
-      name: 'Entretela Rasgável',
-      price: 'R$ 80,00',
-      image: 'https://i.ibb.co/fDbk3G6/entretela-rasgavel.jpg'
-    },
-    {
-      name: 'Óleo Singer',
-      price: 'R$ 12,00',
-      image: 'https://i.ibb.co/hK7dYgR/oleo-singer.jpg'
-    },
-    {
-      name: 'Bastidor Magnético',
-      price: 'R$ 450,00',
-      image: 'https://i.ibb.co/zNcz7z0/bastidor-magnetico.jpg'
-    },
-    {
-      name: 'Tesoura de Arremate',
-      price: 'R$ 25,00',
-      image: 'https://i.ibb.co/R9m4HjX/tesoura-arremate.jpg'
-    },
-];
-
-const CatalogPage: React.FC<{ goToHome: () => void }> = ({ goToHome }) => {
-    const [itemsVisible, setItemsVisible] = useState(false);
-
-    useEffect(() => {
-        const timer = setTimeout(() => setItemsVisible(true), 100);
-        return () => clearTimeout(timer);
-    }, []);
-
-    return (
-        <>
-            <AppHeader title="Catálogo" showBackButton onBackClick={goToHome} />
-            <main className="flex-1 overflow-y-auto p-4 sm:p-6">
-                <div className="max-w-6xl mx-auto grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
-                    {catalogData.map((item, index) => (
-                        <div
-                            key={item.name}
-                            className={`bg-gray-100 dark:bg-gray-800 rounded-3xl p-4 flex flex-col items-center text-center transition-all duration-500 ease-out ${itemsVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-5'}`}
-                            style={{ transitionDelay: `${index * 75}ms` }}
-                        >
-                            <img
-                                src={item.image}
-                                alt={item.name}
-                                className="w-full h-32 sm:h-40 object-cover rounded-2xl mb-4 bg-gray-200 dark:bg-gray-700"
-                                loading="lazy"
-                            />
-                            <h3 className="flex-1 font-semibold text-gray-800 dark:text-gray-100 text-sm sm:text-base">{item.name}</h3>
-                            <p className="mt-2 text-blue-500 font-bold text-lg">{item.price}</p>
-                        </div>
-                    ))}
                 </div>
             </main>
         </>

@@ -59,17 +59,6 @@ export const HistoryIcon: React.FC<{ className?: string }> = ({ className }) => 
     </svg>
 );
 
-export const CatalogIcon: React.FC<{ className?: string }> = ({ className }) => (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M1 4h6l2 5h6l2-5h6"></path>
-        <path d="M17 14h-2.29l-1.42-5h-4.58L7.29 14H5"></path>
-        <path d="M5.64 14l-.45 2h13.62l-.45-2"></path>
-        <path d="M8 22h8"></path>
-        <path d="M9 18v4"></path>
-        <path d="M15 18v4"></path>
-    </svg>
-);
-
 export const TrashIcon: React.FC<{ className?: string }> = ({ className }) => (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <polyline points="3 6 5 6 21 6"></polyline>
