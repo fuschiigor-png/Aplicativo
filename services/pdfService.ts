@@ -1,3 +1,4 @@
+
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
@@ -10,50 +11,43 @@ export const generateOrderPdf = async (elementId: string, fileName: string): Pro
   }
 
   try {
-    const canvas = await html2canvas(input, { 
+    const canvas = await html2canvas(input, {
         scale: 2, // Higher scale for better quality
-        useCORS: true, 
+        useCORS: true,
         logging: false,
-        backgroundColor: document.documentElement.classList.contains('dark') ? '#111827' : '#f9fafb' // Match theme bg
+        // Ensure a consistent white background for the PDF regardless of theme
+        backgroundColor: '#ffffff'
     });
-    
+
     const imgData = canvas.toDataURL('image/png');
-    
-    // A4 size in points: 595.28w x 841.89h
+
     const pdf = new jsPDF({
-        orientation: 'p',
+        orientation: 'portrait',
         unit: 'pt',
         format: 'a4'
     });
-    
-    const margin = 28.35; // 1 cm in points (1cm = 28.35pt)
-    const pageWidth = pdf.internal.pageSize.getWidth();
-    const pageHeight = pdf.internal.pageSize.getHeight();
-    const contentWidth = pageWidth - margin * 2;
-    const contentHeight = pageHeight - margin * 2; // Usable height per page
-    
+
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfHeight = pdf.internal.pageSize.getHeight();
+
     const canvasWidth = canvas.width;
     const canvasHeight = canvas.height;
-    
-    const ratio = canvasHeight / canvasWidth;
-    const totalPdfHeight = contentWidth * ratio; // Total height of the content when scaled
-    
-    let heightLeft = totalPdfHeight;
-    let position = 0; // This is the y-offset for the source image
 
-    // Add the first page
-    pdf.addImage(imgData, 'PNG', margin, margin, contentWidth, totalPdfHeight);
-    heightLeft -= contentHeight;
+    const ratio = canvasWidth / canvasHeight;
 
-    // Add new pages if content is taller than one page
-    while (heightLeft > 0) {
-      position -= contentHeight; 
-      pdf.addPage();
-      // Re-add the same image, but with a new y-offset to show the next part
-      pdf.addImage(imgData, 'PNG', margin, position + margin, contentWidth, totalPdfHeight);
-      heightLeft -= contentHeight;
+    // A small margin
+    const margin = 20;
+
+    // Calculate image dimensions to fit within the page width with margins
+    const imgWidth = pdfWidth - margin * 2;
+    const imgHeight = imgWidth / ratio;
+
+    // Check if the image height exceeds the page height with margins
+    if (imgHeight > pdfHeight - margin * 2) {
+      console.warn("PDF content might overflow the page. The form is taller than a single A4 page.");
     }
-    
+
+    pdf.addImage(imgData, 'PNG', margin, margin, imgWidth, imgHeight);
     pdf.save(`${fileName}.pdf`);
 
   } catch (error) {

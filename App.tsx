@@ -1059,7 +1059,8 @@ const MyOrdersPage: React.FC<{ goToHome: () => void; user: User; onSelectOrder: 
         return () => unsubscribe();
     }, [user.uid]);
 
-    const handleDeleteOrder = async (orderId: string) => {
+    const handleDeleteOrder = async (e: React.MouseEvent<HTMLButtonElement>, orderId: string) => {
+        e.stopPropagation();
         if (window.confirm('Tem certeza que deseja excluir este pedido? A ação não pode ser desfeita.')) {
             try {
                 await deleteOrder(orderId);
@@ -1128,7 +1129,7 @@ const MyOrdersPage: React.FC<{ goToHome: () => void; user: User; onSelectOrder: 
                                 </div>
                             </button>
                              <button
-                                onClick={() => handleDeleteOrder(order.id)}
+                                onClick={(e) => handleDeleteOrder(e, order.id)}
                                 className="ml-4 flex-shrink-0 p-2 rounded-full text-gray-400 hover:bg-red-100 dark:hover:bg-red-900/40 hover:text-red-500 dark:hover:text-red-400 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-100 dark:focus:ring-offset-gray-800 focus:ring-red-500"
                                 aria-label={`Excluir pedido ${order.PEDIDO_NUMERO || 'N/A'}`}
                             >
