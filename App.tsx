@@ -1110,14 +1110,16 @@ const MyOrdersPage: React.FC<{ goToHome: () => void; user: User; onSelectOrder: 
                     {orders.map(order => (
                         <div
                             key={order.id}
-                            onClick={() => onSelectOrder(order)}
-                            className="w-full flex items-center justify-between text-left p-4 bg-gray-100 dark:bg-gray-800 rounded-2xl hover:bg-gray-200 dark:hover:bg-gray-700/60 transition-colors cursor-pointer"
-                            role="button"
-                            tabIndex={0}
-                            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onSelectOrder(order); }}
-                            aria-label={`Ver detalhes do pedido ${order.PEDIDO_NUMERO || 'N/A'}`}
+                            className="w-full flex items-center justify-between text-left p-4 bg-gray-100 dark:bg-gray-800 rounded-2xl hover:bg-gray-200 dark:hover:bg-gray-700/60 transition-colors"
                         >
-                            <div className="flex-1 flex items-center justify-between text-left">
+                            <div
+                                onClick={() => onSelectOrder(order)}
+                                className="flex-1 flex items-center justify-between text-left cursor-pointer"
+                                role="button"
+                                tabIndex={0}
+                                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onSelectOrder(order); }}
+                                aria-label={`Ver detalhes do pedido ${order.PEDIDO_NUMERO || 'N/A'}`}
+                            >
                                 <div>
                                     <p className="font-semibold text-gray-800 dark:text-gray-100">Pedido Nº: {order.PEDIDO_NUMERO || 'N/A'}</p>
                                     <p className="text-sm text-gray-500 dark:text-gray-400">Cliente: {order.CLIENTE_RAZAO_SOCIAL}</p>
@@ -1130,10 +1132,7 @@ const MyOrdersPage: React.FC<{ goToHome: () => void; user: User; onSelectOrder: 
                                 </div>
                             </div>
                              <button
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleDeleteOrder(order.id);
-                                }}
+                                onClick={() => handleDeleteOrder(order.id)}
                                 className="ml-4 flex-shrink-0 p-2 rounded-full text-gray-400 hover:bg-red-100 dark:hover:bg-red-900/40 hover:text-red-500 dark:hover:text-red-400 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-100 dark:focus:ring-offset-gray-800 focus:ring-red-500"
                                 aria-label={`Excluir pedido ${order.PEDIDO_NUMERO || 'N/A'}`}
                             >
