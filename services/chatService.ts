@@ -1,3 +1,4 @@
+
 import {
     collection,
     addDoc,
@@ -9,6 +10,9 @@ import {
     doc,
     runTransaction,
     where,
+    deleteDoc,
+    getDocs,
+    writeBatch,
 } from "firebase/firestore";
 import { db } from "./firebase";
 import { GlobalChatMessage, ExchangeRateHistoryEntry, Order } from "../types";
@@ -16,6 +20,7 @@ import { GlobalChatMessage, ExchangeRateHistoryEntry, Order } from "../types";
 const GLOBAL_CHAT_COLLECTION = 'global_chat';
 const APP_CONFIG_COLLECTION = 'app_config';
 const EXCHANGE_RATE_DOC_ID = 'exchange_rate';
+const ORDER_COUNTER_DOC_ID = 'order_counter';
 const HISTORY_SUBCOLLECTION = 'history';
 const ORDERS_COLLECTION = 'orders';
 
@@ -150,6 +155,44 @@ export const getExchangeRateHistoryListener = (
     return unsubscribe;
 };
 
+// Get the next sequential order number
+export const getNextOrderNumber = async (): Promise<string> => {
+    const counterDocRef = doc(db, APP_CONFIG_COLLECTION, ORDER_COUNTER_DOC_ID);
+    try {
+        const newOrderNumber = await runTransaction(db, async (transaction) => {
+            const counterDoc = await transaction.get(counterDocRef);
+            const STARTING_NUMBER = 1387;
+            let nextNumber;
+
+            if (!counterDoc.exists() || !counterDoc.data().lastOrderNumber) {
+                nextNumber = STARTING_NUMBER;
+            } else {
+                const currentNumber = counterDoc.data().lastOrderNumber;
+                // Ensure we don't go below the starting number if manually changed in DB
+                nextNumber = Math.max(STARTING_NUMBER, currentNumber + 1);
+            }
+            
+            transaction.set(counterDocRef, { lastOrderNumber: nextNumber }, { merge: true });
+            return nextNumber;
+        });
+        return newOrderNumber.toString();
+    } catch (error) {
+        console.error("Error getting next order number:", error);
+        throw new Error("Falha ao obter o número do próximo pedido.");
+    }
+};
+
+// Delete an order from the database
+export const deleteOrder = async (orderId: string): Promise<void> => {
+    try {
+        const orderDocRef = doc(db, ORDERS_COLLECTION, orderId);
+        await deleteDoc(orderDocRef);
+    } catch (error) {
+        console.error("Error deleting order:", error);
+        throw error;
+    }
+};
+
 // Save a new order to the database
 export const saveOrder = async (
     userId: string,
@@ -199,4 +242,28 @@ export const getOrdersListener = (
     });
 
     return unsubscribe;
+};
+
+// Delete all orders for a user and reset the counter
+export const deleteAllOrdersAndResetCounter = async (userId: string): Promise<void> => {
+    try {
+        const ordersCollectionRef = collection(db, ORDERS_COLLECTION);
+        const q = query(ordersCollectionRef, where('userId', '==', userId));
+        const querySnapshot = await getDocs(q);
+
+        const batch = writeBatch(db);
+
+        querySnapshot.forEach((doc) => {
+            batch.delete(doc.ref);
+        });
+
+        const counterDocRef = doc(db, APP_CONFIG_COLLECTION, ORDER_COUNTER_DOC_ID);
+        // Set lastOrderNumber to 1386 so the next one will be 1387
+        batch.set(counterDocRef, { lastOrderNumber: 1386 }, { merge: true });
+
+        await batch.commit();
+    } catch (error) {
+        console.error("Error deleting all orders and resetting counter:", error);
+        throw error;
+    }
 };

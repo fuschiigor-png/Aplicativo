@@ -1,3 +1,4 @@
+
 // FIX: Add Message and MessageSender types to resolve import errors in components/ChatMessage.tsx.
 export enum MessageSender {
   USER = 'user',
@@ -53,7 +54,5 @@ export interface Order {
   PRODUTO_QUANTIDADE: string;
   PRODUTO_DESCRICAO: string;
   PEDIDO_VALOR_TOTAL: string;
-  ENTREGA_PREVISAO_MES: string;
-  VENCIMENTO_DIA: string;
   OBSERVACAO_GERAL: string;
 }

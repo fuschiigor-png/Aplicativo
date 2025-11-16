@@ -39,7 +39,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
 
   return (
     <div className={`flex items-start gap-3 ${containerClasses} transition-all duration-500 ease-out ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
-      {isAI && <BarudexIcon className="w-8 h-8 mt-1" />}
+      {isAI && <BarudexIcon className={`w-8 h-8 mt-1 transition-transform duration-300 ease-out delay-200 ${isVisible ? 'scale-100' : 'scale-0'}`} />}
       <div
         className={`max-w-md lg:max-w-lg xl:max-w-2xl px-4 py-3 rounded-2xl shadow-sm ${bubbleClasses}`}
       >

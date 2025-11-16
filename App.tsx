@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef, FormEvent } from 'react';
 import { User } from 'firebase/auth';
 import LoginPage from './components/LoginPage';
@@ -7,8 +8,8 @@ import ChatInput from './components/ChatInput';
 import ChatMessage from './components/ChatMessage';
 import GlobalChatMessage from './components/GlobalChatMessage';
 import { generateChatResponse, getExchangeRate } from './services/geminiService';
-import { getMessagesListener, sendGlobalMessage, getExchangeRateConfigListener, getExchangeRateHistoryListener, updateExchangeRateConfig, saveOrder, getOrdersListener } from './services/chatService';
-import { BarudexIcon, MoonIcon, SunIcon, ModelsIcon, GlobalChatIcon, ExchangeRateIcon, LogoutIcon, DocumentIcon, HistoryIcon, CatalogIcon } from './components/Icons';
+import { getMessagesListener, sendGlobalMessage, getExchangeRateConfigListener, getExchangeRateHistoryListener, updateExchangeRateConfig, saveOrder, getOrdersListener, deleteOrder, getNextOrderNumber, deleteAllOrdersAndResetCounter } from './services/chatService';
+import { BarudexIcon, MoonIcon, SunIcon, ModelsIcon, GlobalChatIcon, ExchangeRateIcon, LogoutIcon, DocumentIcon, HistoryIcon, CatalogIcon, TrashIcon } from './components/Icons';
 import { generateOrderPdf } from './services/pdfService';
 
 type Theme = 'light' | 'dark';
@@ -874,12 +875,27 @@ const OrderPage: React.FC<{ goToHome: () => void; user: User; initialOrder: Orde
     PRODUTO_QUANTIDADE: initialOrder?.PRODUTO_QUANTIDADE || '1',
     PRODUTO_DESCRICAO: initialOrder?.PRODUTO_DESCRICAO || '',
     PEDIDO_VALOR_TOTAL: initialOrder?.PEDIDO_VALOR_TOTAL || '',
-    ENTREGA_PREVISAO_MES: initialOrder?.ENTREGA_PREVISAO_MES || '',
-    VENCIMENTO_DIA: initialOrder?.VENCIMENTO_DIA || '',
     OBSERVACAO_GERAL: initialOrder?.OBSERVACAO_GERAL || ''
   });
 
   const isViewMode = !!initialOrder;
+
+  useEffect(() => {
+    if (!isViewMode) {
+      setFormData(prev => ({ ...prev, PEDIDO_NUMERO: 'Carregando...' }));
+      const fetchOrderNumber = async () => {
+        try {
+          const nextNumber = await getNextOrderNumber();
+          setFormData(prev => ({ ...prev, PEDIDO_NUMERO: nextNumber }));
+        } catch (error) {
+          console.error("Failed to fetch next order number:", error);
+          setFormData(prev => ({ ...prev, PEDIDO_NUMERO: 'ERRO!' }));
+          alert("Não foi possível obter um número de pedido automático. Por favor, tente recarregar a página.");
+        }
+      };
+      fetchOrderNumber();
+    }
+  }, [isViewMode]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -888,6 +904,12 @@ const OrderPage: React.FC<{ goToHome: () => void; user: User; initialOrder: Orde
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!isViewMode && (formData.PEDIDO_NUMERO === 'Carregando...' || formData.PEDIDO_NUMERO === 'ERRO!')) {
+        alert("Aguarde o número do pedido ser gerado ou recarregue a página se houver um erro.");
+        return;
+    }
+
     setIsSaving(true);
     
     const formElementId = 'order-form-container';
@@ -910,61 +932,110 @@ const OrderPage: React.FC<{ goToHome: () => void; user: User; initialOrder: Orde
     }
   };
 
-  const inputClass = "w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-xl py-2 px-4 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-200 dark:disabled:bg-gray-800/50";
-  const labelClass = "block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1";
+  const inputClass = "text-sm w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg py-1.5 px-2 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500 read-only:bg-gray-200 dark:read-only:bg-gray-800/50";
+  const labelClass = "block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1";
   
   return (
     <>
       <AppHeader title={isViewMode ? "Detalhes do Pedido" : "Gerar Pedido"} showBackButton onBackClick={goToHome} />
-      <main className="flex-1 overflow-y-auto p-4 sm:p-6">
-        <form onSubmit={handleSubmit} id="order-form-container" className="max-w-4xl mx-auto space-y-8 mb-24">
+      <main className="flex-1 overflow-y-auto p-2 sm:p-4">
+        <form onSubmit={handleSubmit} id="order-form-container" className="max-w-3xl mx-auto space-y-3 mb-24 p-4 bg-white dark:bg-gray-800 shadow-lg rounded-xl">
             
-            <div className="bg-gray-100 dark:bg-gray-800 p-6 rounded-3xl">
-                <h2 className="text-xl font-semibold mb-4 border-b pb-2 border-gray-200 dark:border-gray-700">Dados do Pedido</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div><label htmlFor="PEDIDO_NUMERO" className={labelClass}>Nº Pedido</label><input type="text" name="PEDIDO_NUMERO" id="PEDIDO_NUMERO" value={formData.PEDIDO_NUMERO} onChange={handleInputChange} className={inputClass} disabled={isViewMode} /></div>
-                    <div><label htmlFor="PEDIDO_DATA" className={labelClass}>Data</label><input type="date" name="PEDIDO_DATA" id="PEDIDO_DATA" value={formData.PEDIDO_DATA} onChange={handleInputChange} className={inputClass} disabled={isViewMode} /></div>
-                    <div><label htmlFor="VENDEDOR_NOME" className={labelClass}>Vendedor</label><input type="text" name="VENDEDOR_NOME" id="VENDEDOR_NOME" value={formData.VENDEDOR_NOME} onChange={handleInputChange} className={inputClass} disabled={isViewMode} /></div>
-                    <div><label htmlFor="TIPO_VENDA" className={labelClass}>Tipo de Venda</label><input type="text" name="TIPO_VENDA" id="TIPO_VENDA" value={formData.TIPO_VENDA} onChange={handleInputChange} className={inputClass} disabled={isViewMode} /></div>
+            <div className="flex flex-row justify-between items-start gap-4 border-b border-gray-200 dark:border-gray-700 pb-3">
+                <div className="text-left text-[10px] leading-tight text-gray-600 dark:text-gray-400 space-y-0.5">
+                    <h2 className="text-base font-bold text-gray-900 dark:text-white mb-1">Barudan do Brasil Com. e Ind. Ltda.</h2>
+                    <p>Av. Gomes Freire, 574 - Centro Rio de Janeiro - RJ - Cep: 20231-015</p>
+                    <p>Tel.: (21) 2506-0050 - Fax: (21) 2506-0070</p>
+                    <p>Website: www.barudan.com.br - E-mail: sac@barudan.com.br</p>
+                    <p>CNPJ: 40.375.636/0001-32 - Inscrição Estadual: 84.369.381</p>
+                </div>
+                
+                <div className="flex-shrink-0 w-auto">
+                    <div className="grid grid-cols-2 gap-x-2 gap-y-2">
+                        <div><label htmlFor="PEDIDO_NUMERO" className={labelClass}>Nº Pedido</label><input type="text" name="PEDIDO_NUMERO" id="PEDIDO_NUMERO" value={formData.PEDIDO_NUMERO} className={inputClass} readOnly /></div>
+                        <div><label htmlFor="PEDIDO_DATA" className={labelClass}>Data</label><input type="date" name="PEDIDO_DATA" id="PEDIDO_DATA" value={formData.PEDIDO_DATA} onChange={handleInputChange} className={inputClass} readOnly={isViewMode} /></div>
+                        <div className="col-span-2"><label htmlFor="VENDEDOR_NOME" className={labelClass}>Vendedor</label><input type="text" name="VENDEDOR_NOME" id="VENDEDOR_NOME" value={formData.VENDEDOR_NOME} onChange={handleInputChange} className={inputClass} readOnly={isViewMode} /></div>
+                        <div className="col-span-2"><label htmlFor="TIPO_VENDA" className={labelClass}>Tipo de Venda</label><input type="text" name="TIPO_VENDA" id="TIPO_VENDA" value={formData.TIPO_VENDA} onChange={handleInputChange} className={inputClass} readOnly={isViewMode} /></div>
+                    </div>
                 </div>
             </div>
 
-            <div className="bg-gray-100 dark:bg-gray-800 p-6 rounded-3xl">
-                <h2 className="text-xl font-semibold mb-4 border-b pb-2 border-gray-200 dark:border-gray-700">Dados do Cliente</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="md:col-span-2"><label htmlFor="CLIENTE_RAZAO_SOCIAL" className={labelClass}>Razão Social</label><input type="text" name="CLIENTE_RAZAO_SOCIAL" id="CLIENTE_RAZAO_SOCIAL" value={formData.CLIENTE_RAZAO_SOCIAL} onChange={handleInputChange} className={inputClass} disabled={isViewMode} /></div>
-                    <div><label htmlFor="CLIENTE_CNPJ" className={labelClass}>CNPJ</label><input type="text" name="CLIENTE_CNPJ" id="CLIENTE_CNPJ" value={formData.CLIENTE_CNPJ} onChange={handleInputChange} className={inputClass} disabled={isViewMode} /></div>
-                    <div><label htmlFor="CLIENTE_TELEFONE" className={labelClass}>Telefone</label><input type="tel" name="CLIENTE_TELEFONE" id="CLIENTE_TELEFONE" value={formData.CLIENTE_TELEFONE} onChange={handleInputChange} className={inputClass} disabled={isViewMode} /></div>
-                    <div className="md:col-span-2"><label htmlFor="CLIENTE_ENDERECO" className={labelClass}>Endereço</label><input type="text" name="CLIENTE_ENDERECO" id="CLIENTE_ENDERECO" value={formData.CLIENTE_ENDERECO} onChange={handleInputChange} className={inputClass} disabled={isViewMode} /></div>
-                    <div><label htmlFor="CLIENTE_BAIRRO" className={labelClass}>Bairro</label><input type="text" name="CLIENTE_BAIRRO" id="CLIENTE_BAIRRO" value={formData.CLIENTE_BAIRRO} onChange={handleInputChange} className={inputClass} disabled={isViewMode} /></div>
-                    <div><label htmlFor="CLIENTE_CEP" className={labelClass}>CEP</label><input type="text" name="CLIENTE_CEP" id="CLIENTE_CEP" value={formData.CLIENTE_CEP} onChange={handleInputChange} className={inputClass} disabled={isViewMode} /></div>
-                    <div><label htmlFor="CLIENTE_CIDADE" className={labelClass}>Cidade</label><input type="text" name="CLIENTE_CIDADE" id="CLIENTE_CIDADE" value={formData.CLIENTE_CIDADE} onChange={handleInputChange} className={inputClass} disabled={isViewMode} /></div>
-                    <div><label htmlFor="CLIENTE_UF" className={labelClass}>UF</label><input type="text" name="CLIENTE_UF" id="CLIENTE_UF" value={formData.CLIENTE_UF} onChange={handleInputChange} className={inputClass} disabled={isViewMode} /></div>
-                    <div className="md:col-span-2"><label htmlFor="CLIENTE_CONTATO_AC" className={labelClass}>Contato (A/C)</label><input type="text" name="CLIENTE_CONTATO_AC" id="CLIENTE_CONTATO_AC" value={formData.CLIENTE_CONTATO_AC} onChange={handleInputChange} className={inputClass} disabled={isViewMode} /></div>
-                </div>
-            </div>
+            <section>
+                <h2 className="text-base font-semibold mb-2 text-gray-800 dark:text-gray-200">Dados do Cliente</h2>
+                <div className="grid grid-cols-12 gap-x-3 gap-y-2">
+                    <div className="col-span-12">
+                        <label htmlFor="CLIENTE_RAZAO_SOCIAL" className={labelClass}>Razão Social</label>
+                        <input type="text" name="CLIENTE_RAZAO_SOCIAL" id="CLIENTE_RAZAO_SOCIAL" value={formData.CLIENTE_RAZAO_SOCIAL} onChange={handleInputChange} className={inputClass} readOnly={isViewMode} />
+                    </div>
+                    
+                    <div className="col-span-12 md:col-span-5">
+                        <label htmlFor="CLIENTE_CNPJ" className={labelClass}>CNPJ</label>
+                        <input type="text" name="CLIENTE_CNPJ" id="CLIENTE_CNPJ" value={formData.CLIENTE_CNPJ} onChange={handleInputChange} className={inputClass} readOnly={isViewMode} maxLength={18} />
+                    </div>
 
-            <div className="bg-gray-100 dark:bg-gray-800 p-6 rounded-3xl">
-                <h2 className="text-xl font-semibold mb-4 border-b pb-2 border-gray-200 dark:border-gray-700">Produto e Transporte</h2>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                     <div><label htmlFor="PRODUTO_QUANTIDADE" className={labelClass}>Quantidade</label><input type="number" name="PRODUTO_QUANTIDADE" id="PRODUTO_QUANTIDADE" value={formData.PRODUTO_QUANTIDADE} onChange={handleInputChange} className={inputClass} disabled={isViewMode} /></div>
-                     <div className="md:col-span-3"><label htmlFor="PRODUTO_DESCRICAO" className={labelClass}>Descrição do Produto</label><textarea name="PRODUTO_DESCRICAO" id="PRODUTO_DESCRICAO" value={formData.PRODUTO_DESCRICAO} onChange={handleInputChange} className={`${inputClass} h-24`} disabled={isViewMode}></textarea></div>
-                     <div className="md:col-span-4"><label htmlFor="TRANSPORTADORA" className={labelClass}>Transportadora</label><input type="text" name="TRANSPORTADORA" id="TRANSPORTADORA" value={formData.TRANSPORTADORA} onChange={handleInputChange} className={inputClass} disabled={isViewMode} /></div>
-                </div>
-            </div>
+                    <div className="col-span-12 md:col-span-7">
+                        <label htmlFor="CLIENTE_TELEFONE" className={labelClass}>Telefone</label>
+                        <input type="tel" name="CLIENTE_TELEFONE" id="CLIENTE_TELEFONE" value={formData.CLIENTE_TELEFONE} onChange={handleInputChange} className={inputClass} readOnly={isViewMode} maxLength={20} />
+                    </div>
 
-            <div className="bg-gray-100 dark:bg-gray-800 p-6 rounded-3xl">
-                <h2 className="text-xl font-semibold mb-4 border-b pb-2 border-gray-200 dark:border-gray-700">Condições e Observações</h2>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div><label htmlFor="PEDIDO_VALOR_TOTAL" className={labelClass}>Valor Total (R$)</label><input type="text" name="PEDIDO_VALOR_TOTAL" id="PEDIDO_VALOR_TOTAL" value={formData.PEDIDO_VALOR_TOTAL} onChange={handleInputChange} className={inputClass} disabled={isViewMode} /></div>
-                    <div><label htmlFor="ENTREGA_PREVISAO_MES" className={labelClass}>Previsão de Entrega (Mês)</label><input type="text" name="ENTREGA_PREVISAO_MES" id="ENTREGA_PREVISAO_MES" value={formData.ENTREGA_PREVISAO_MES} onChange={handleInputChange} className={inputClass} disabled={isViewMode} /></div>
-                    <div><label htmlFor="VENCIMENTO_DIA" className={labelClass}>Vencimento (Dia)</label><input type="text" name="VENCIMENTO_DIA" id="VENCIMENTO_DIA" value={formData.VENCIMENTO_DIA} onChange={handleInputChange} className={inputClass} disabled={isViewMode} /></div>
-                    <div className="md:col-span-3"><label htmlFor="OBSERVACAO_GERAL" className={labelClass}>Observação Geral</label><textarea name="OBSERVACAO_GERAL" id="OBSERVACAO_GERAL" value={formData.OBSERVACAO_GERAL} onChange={handleInputChange} className={`${inputClass} h-24`} disabled={isViewMode}></textarea></div>
+                    <div className="col-span-12">
+                        <label htmlFor="CLIENTE_ENDERECO" className={labelClass}>Endereço</label>
+                        <input type="text" name="CLIENTE_ENDERECO" id="CLIENTE_ENDERECO" value={formData.CLIENTE_ENDERECO} onChange={handleInputChange} className={inputClass} readOnly={isViewMode} />
+                    </div>
+
+                    <div className="col-span-12 md:col-span-6">
+                        <label htmlFor="CLIENTE_BAIRRO" className={labelClass}>Bairro</label>
+                        <input type="text" name="CLIENTE_BAIRRO" id="CLIENTE_BAIRRO" value={formData.CLIENTE_BAIRRO} onChange={handleInputChange} className={inputClass} readOnly={isViewMode} />
+                    </div>
+
+                    <div className="col-span-12 md:col-span-6">
+                        <label htmlFor="CLIENTE_CIDADE" className={labelClass}>Cidade</label>
+                        <input type="text" name="CLIENTE_CIDADE" id="CLIENTE_CIDADE" value={formData.CLIENTE_CIDADE} onChange={handleInputChange} className={inputClass} readOnly={isViewMode} />
+                    </div>
+                    
+                    <div className="col-span-12 md:col-span-4">
+                        <label htmlFor="CLIENTE_CEP" className={labelClass}>CEP</label>
+                        <input type="text" name="CLIENTE_CEP" id="CLIENTE_CEP" value={formData.CLIENTE_CEP} onChange={handleInputChange} className={inputClass} readOnly={isViewMode} maxLength={9} />
+                    </div>
+
+                    <div className="col-span-12 md:col-span-2">
+                        <label htmlFor="CLIENTE_UF" className={labelClass}>UF</label>
+                        <input type="text" name="CLIENTE_UF" id="CLIENTE_UF" value={formData.CLIENTE_UF} onChange={handleInputChange} className={inputClass} readOnly={isViewMode} maxLength={2} />
+                    </div>
+
+                    <div className="col-span-12 md:col-span-6">
+                        <label htmlFor="CLIENTE_CONTATO_AC" className={labelClass}>Contato (A/C)</label>
+                        <input type="text" name="CLIENTE_CONTATO_AC" id="CLIENTE_CONTATO_AC" value={formData.CLIENTE_CONTATO_AC} onChange={handleInputChange} className={inputClass} readOnly={isViewMode} />
+                    </div>
                 </div>
-            </div>
+            </section>
+
+            <section>
+                <h2 className="text-base font-semibold mb-2 text-gray-800 dark:text-gray-200">Produto / Observações</h2>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-x-3 gap-y-2">
+                     <div className="md:col-span-1"><label htmlFor="PRODUTO_QUANTIDADE" className={labelClass}>Quantidade</label><input type="number" name="PRODUTO_QUANTIDADE" id="PRODUTO_QUANTIDADE" value={formData.PRODUTO_QUANTIDADE} onChange={handleInputChange} className={inputClass} readOnly={isViewMode} /></div>
+                     <div className="md:col-span-3"><label htmlFor="PRODUTO_DESCRICAO" className={labelClass}>Descrição do Produto</label><textarea name="PRODUTO_DESCRICAO" id="PRODUTO_DESCRICAO" value={formData.PRODUTO_DESCRICAO} onChange={handleInputChange} className={`${inputClass} h-20`} readOnly={isViewMode}></textarea></div>
+                     <div className="md:col-span-4"><label htmlFor="OBSERVACAO_GERAL" className={labelClass}>Observação Geral</label><textarea name="OBSERVACAO_GERAL" id="OBSERVACAO_GERAL" value={formData.OBSERVACAO_GERAL} onChange={handleInputChange} className={`${inputClass} h-20`} readOnly={isViewMode}></textarea></div>
+                </div>
+            </section>
+            
+            <section>
+                <h2 className="text-base font-semibold mb-2 text-gray-800 dark:text-gray-200">Condições Comerciais</h2>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-x-3 gap-y-2">
+                    <div><label htmlFor="PEDIDO_VALOR_TOTAL" className={labelClass}>Valor Total (R$)</label><input type="text" name="PEDIDO_VALOR_TOTAL" id="PEDIDO_VALOR_TOTAL" value={formData.PEDIDO_VALOR_TOTAL} onChange={handleInputChange} className={inputClass} readOnly={isViewMode} /></div>
+                </div>
+            </section>
+
+            <section>
+                <h2 className="text-base font-semibold mb-2 text-gray-800 dark:text-gray-200">Transporte</h2>
+                <div className="grid grid-cols-1">
+                    <div><label htmlFor="TRANSPORTADORA" className={labelClass}>Transportadora</label><input type="text" name="TRANSPORTADORA" id="TRANSPORTADORA" value={formData.TRANSPORTADORA} onChange={handleInputChange} className={inputClass} readOnly={isViewMode} /></div>
+                </div>
+            </section>
+
 
             <div className="pt-4 flex justify-end">
-                <button type="submit" disabled={isSaving} className="w-full sm:w-auto flex justify-center py-3 px-8 border border-transparent rounded-full shadow-sm text-md font-bold text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950 focus:ring-blue-500 disabled:bg-gray-400 dark:disabled:bg-gray-600">
+                <button type="submit" disabled={isSaving} className="w-full sm:w-auto flex justify-center py-2 px-6 border border-transparent rounded-full shadow-sm text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-800 focus:ring-blue-500 disabled:bg-gray-400 dark:disabled:bg-gray-600">
                     {isSaving ? 'Processando...' : (isViewMode ? 'Baixar PDF Novamente' : 'Salvar e Gerar PDF')}
                 </button>
             </div>
@@ -988,11 +1059,46 @@ const MyOrdersPage: React.FC<{ goToHome: () => void; user: User; onSelectOrder: 
         return () => unsubscribe();
     }, [user.uid]);
 
+    const handleDeleteOrder = async (orderId: string) => {
+        if (window.confirm('Tem certeza que deseja excluir este pedido? A ação não pode ser desfeita.')) {
+            try {
+                await deleteOrder(orderId);
+            } catch (error) {
+                console.error("Failed to delete order:", error);
+                alert("Falha ao excluir o pedido.");
+            }
+        }
+    };
+
+    const handleDeleteAllOrders = async () => {
+        if (window.confirm('TEM CERTEZA?\n\nIsso excluirá TODOS os seus pedidos e reiniciará a contagem de numeração para 1387. Esta ação é irreversível.')) {
+            try {
+                await deleteAllOrdersAndResetCounter(user.uid);
+                alert('Todos os pedidos foram excluídos e o contador foi reiniciado com sucesso.');
+            } catch (error) {
+                console.error("Failed to delete all orders:", error);
+                alert("Falha ao excluir todos os pedidos.");
+            }
+        }
+    };
+
     return (
         <>
             <AppHeader title="Meus Pedidos" showBackButton onBackClick={goToHome} />
             <main className="flex-1 overflow-y-auto p-4 sm:p-6">
                 <div className="max-w-4xl mx-auto space-y-4">
+                     {!isLoading && orders.length > 0 && (
+                        <div className="flex justify-end mb-2">
+                            <button
+                                onClick={handleDeleteAllOrders}
+                                className="flex items-center gap-2 text-sm text-red-500 bg-red-100/50 dark:text-red-400 dark:bg-red-900/40 hover:bg-red-100 dark:hover:bg-red-900/80 font-semibold px-4 py-2 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-800 focus:ring-red-500"
+                                aria-label="Excluir todos os pedidos e reiniciar contagem"
+                            >
+                                <TrashIcon className="w-4 h-4" />
+                                <span>Limpar Tudo e Reiniciar</span>
+                            </button>
+                        </div>
+                    )}
                     {isLoading && <p className="text-center text-gray-500 dark:text-gray-400 animate-pulse">Carregando pedidos...</p>}
                     {!isLoading && orders.length === 0 && (
                         <div className="text-center py-10 bg-gray-100 dark:bg-gray-800 rounded-3xl">
@@ -1001,22 +1107,34 @@ const MyOrdersPage: React.FC<{ goToHome: () => void; user: User; onSelectOrder: 
                         </div>
                     )}
                     {orders.map(order => (
-                        <button
+                        <div
                             key={order.id}
-                            onClick={() => onSelectOrder(order)}
                             className="w-full flex items-center justify-between text-left p-4 bg-gray-100 dark:bg-gray-800 rounded-2xl hover:bg-gray-200 dark:hover:bg-gray-700/60 transition-colors"
                         >
-                            <div>
-                                <p className="font-semibold text-gray-800 dark:text-gray-100">Pedido Nº: {order.PEDIDO_NUMERO || 'N/A'}</p>
-                                <p className="text-sm text-gray-500 dark:text-gray-400">Cliente: {order.CLIENTE_RAZAO_SOCIAL}</p>
-                            </div>
-                            <div className="text-right">
-                                <p className="text-sm text-gray-500 dark:text-gray-400">
-                                    {order.createdAt ? new Date(order.createdAt.seconds * 1000).toLocaleDateString('pt-BR') : ''}
-                                </p>
-                                <span className="text-blue-500 text-sm font-semibold">Ver Detalhes</span>
-                            </div>
-                        </button>
+                            <button
+                                onClick={() => onSelectOrder(order)}
+                                className="flex-1 flex items-center justify-between text-left focus:outline-none"
+                                aria-label={`Ver detalhes do pedido ${order.PEDIDO_NUMERO || 'N/A'}`}
+                            >
+                                <div>
+                                    <p className="font-semibold text-gray-800 dark:text-gray-100">Pedido Nº: {order.PEDIDO_NUMERO || 'N/A'}</p>
+                                    <p className="text-sm text-gray-500 dark:text-gray-400">Cliente: {order.CLIENTE_RAZAO_SOCIAL}</p>
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                                        {order.createdAt ? new Date(order.createdAt.seconds * 1000).toLocaleDateString('pt-BR') : ''}
+                                    </p>
+                                    <span className="text-blue-500 text-sm font-semibold">Ver Detalhes</span>
+                                </div>
+                            </button>
+                             <button
+                                onClick={() => handleDeleteOrder(order.id)}
+                                className="ml-4 flex-shrink-0 p-2 rounded-full text-gray-400 hover:bg-red-100 dark:hover:bg-red-900/40 hover:text-red-500 dark:hover:text-red-400 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-100 dark:focus:ring-offset-gray-800 focus:ring-red-500"
+                                aria-label={`Excluir pedido ${order.PEDIDO_NUMERO || 'N/A'}`}
+                            >
+                                <TrashIcon className="w-5 h-5" />
+                            </button>
+                        </div>
                     ))}
                 </div>
             </main>
