@@ -24,21 +24,21 @@ const GlobalChatMessage: React.FC<GlobalChatMessageProps> = ({ message, currentU
 
     const containerClasses = isCurrentUser ? 'justify-end' : 'justify-start';
     const bubbleClasses = isCurrentUser
-        ? 'bg-blue-600 text-white'
-        : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200';
+        ? 'bg-primary text-white'
+        : 'bg-primary-light dark:bg-surface-dark text-text-primary dark:text-text-primary-dark shadow-sm';
 
     return (
         <div className={`flex items-end gap-3 ${containerClasses} transition-all duration-500 ease-out ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
             <div className={`flex flex-col ${isCurrentUser ? 'items-end' : 'items-start'}`}>
                 {!isCurrentUser && (
-                    <span className="text-xs text-gray-500 dark:text-gray-400 mb-1 px-2">{userEmail}</span>
+                    <span className="text-xs text-text-subtle dark:text-text-secondary-dark mb-1 px-2">{userEmail}</span>
                 )}
                 <div
                     className={`max-w-md lg:max-w-lg xl:max-w-2xl px-4 py-3 rounded-2xl shadow-sm ${bubbleClasses}`}
                 >
                     <p className="text-inherit whitespace-pre-wrap">{text}</p>
                 </div>
-                <span className="text-xs text-gray-400 dark:text-gray-500 mt-1 px-2">{formattedTime}</span>
+                <span className="text-xs text-text-subtle dark:text-text-secondary-dark mt-1 px-2">{formattedTime}</span>
             </div>
         </div>
     );

@@ -37,7 +37,7 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, onSendCuriosity, i
           type="button"
           onClick={handleCuriosityClick}
           disabled={isLoading}
-          className="w-12 h-12 bg-gray-200 dark:bg-gray-800 rounded-full flex-shrink-0 flex items-center justify-center text-amber-500 dark:text-amber-400 hover:bg-gray-300 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-110 active:scale-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950 focus:ring-amber-400"
+          className="h-11 w-11 bg-surface-light dark:bg-surface-dark rounded-lg flex-shrink-0 flex items-center justify-center text-warning hover:bg-primary-light/80 dark:hover:bg-surface-dark/80 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-110 active:scale-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-background-light dark:focus:ring-offset-background-dark focus:ring-warning"
           aria-label="Pedir uma curiosidade aleatória"
         >
           <svg 
@@ -57,13 +57,13 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, onSendCuriosity, i
           placeholder="Pergunte algo..."
           disabled={isLoading}
           rows={1}
-          className="flex-1 bg-gray-200 dark:bg-gray-800 border-transparent rounded-full py-3 px-5 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none disabled:opacity-50"
+          className="flex-1 h-11 bg-surface-light dark:bg-surface-dark border border-border-color dark:border-border-dark rounded-lg py-2.5 px-5 text-text-primary dark:text-text-primary-dark placeholder-placeholder focus:outline-none focus:ring-2 focus:ring-primary focus:shadow-focus-ring resize-none disabled:opacity-50"
           aria-label="Caixa de mensagem"
         />
         <button
           type="submit"
           disabled={isLoading || !inputText.trim()}
-          className="w-12 h-12 bg-blue-600 rounded-full flex-shrink-0 flex items-center justify-center text-white hover:bg-blue-700 disabled:bg-gray-400 dark:disabled:bg-gray-600 disabled:cursor-not-allowed transform hover:scale-110 active:scale-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950 focus:ring-blue-500"
+          className="h-11 w-11 bg-primary rounded-lg flex-shrink-0 flex items-center justify-center text-white hover:bg-primary-dark disabled:bg-gray-400 dark:disabled:bg-gray-600 disabled:cursor-not-allowed transform hover:scale-110 active:scale-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-background-light dark:focus:ring-offset-background-dark focus:ring-primary"
           aria-label="Enviar mensagem"
         >
           <svg

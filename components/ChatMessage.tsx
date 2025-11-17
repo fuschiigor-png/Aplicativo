@@ -21,10 +21,10 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
 
   const containerClasses = isUser ? 'justify-end' : 'justify-start';
   const bubbleClasses = isUser
-    ? 'bg-blue-600 text-white'
+    ? 'bg-primary text-white'
     : isError 
-    ? 'bg-red-100 dark:bg-red-900/50 text-red-900 dark:text-red-100' 
-    : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200';
+    ? 'bg-error text-white' 
+    : 'bg-primary-light dark:bg-surface-dark text-text-primary dark:text-text-primary-dark shadow-sm';
   
   const manualSnippetRegex = /```manual\n([\s\S]+?)```/;
   const match = text.match(manualSnippetRegex);
@@ -45,9 +45,9 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
       >
         {mainText && <p className="whitespace-pre-wrap">{mainText}</p>}
         {snippetText && (
-            <div className={`${mainText ? 'mt-3' : ''} border border-gray-300 dark:border-gray-600 rounded-lg p-3 bg-white/80 dark:bg-gray-950/30`}>
-                <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">Trecho do Manual</p>
-                <p className="text-sm font-mono whitespace-pre-wrap text-gray-700 dark:text-gray-300">{snippetText}</p>
+            <div className={`${mainText ? 'mt-3' : ''} border border-border-color dark:border-border-dark rounded-lg p-3 bg-white/80 dark:bg-black/20`}>
+                <p className="text-xs font-semibold text-text-subtle dark:text-text-secondary-dark mb-2">Trecho do Manual</p>
+                <p className="text-sm font-mono whitespace-pre-wrap text-text-secondary dark:text-text-secondary-dark">{snippetText}</p>
             </div>
         )}
       </div>

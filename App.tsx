@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect, useRef, FormEvent } from 'react';
 import { User } from 'firebase/auth';
 import LoginPage from './components/LoginPage';
@@ -19,7 +17,7 @@ type Theme = 'light' | 'dark';
 const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
-  const [theme, setTheme] = useState<Theme>('dark');
+  const [theme, setTheme] = useState<Theme>('light');
 
   useEffect(() => {
     const unsubscribe = onAuthStateChangedListener((user) => {
@@ -28,11 +26,8 @@ const App: React.FC = () => {
     });
 
     const savedTheme = localStorage.getItem('theme') as Theme | null;
-    if (savedTheme) {
-        setTheme(savedTheme);
-    } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-        setTheme('dark');
-    }
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    setTheme(savedTheme || (prefersDark ? 'dark' : 'light'));
 
     return unsubscribe;
   }, []);
@@ -40,10 +35,8 @@ const App: React.FC = () => {
   useEffect(() => {
       if (theme === 'dark') {
           document.documentElement.classList.add('dark');
-          document.body.className = 'bg-gray-950';
       } else {
           document.documentElement.classList.remove('dark');
-          document.body.className = 'bg-gradient-to-b from-blue-100 to-white';
       }
       localStorage.setItem('theme', theme);
   }, [theme]);
@@ -54,8 +47,8 @@ const App: React.FC = () => {
 
   if (isAuthLoading) {
     return (
-      <div className="flex items-center justify-center h-screen bg-gray-950">
-        <div className="text-white text-xl animate-pulse">Carregando...</div>
+      <div className="flex items-center justify-center h-screen bg-background-light dark:bg-background-dark">
+        <div className="text-text-secondary dark:text-text-secondary-dark text-xl animate-pulse">Carregando...</div>
       </div>
     );
   }
@@ -113,7 +106,7 @@ const MainDashboard: React.FC<{ user: User; theme: Theme; toggleTheme: () => voi
   };
 
   return (
-    <div className="flex flex-col h-screen text-gray-800 dark:text-gray-200 font-sans">
+    <div className="flex flex-col h-screen bg-background-light dark:bg-background-dark text-text-primary dark:text-text-primary-dark font-sans">
       {view === 'home' && <HomePage setView={setView} onNewOrderClick={handleNewOrder} />}
       {view === 'models' && <MachineModelsPage goToHome={goToHome} referenceRate={referenceRate} />}
       {view === 'chat' && <ChatPage goToHome={goToHome} />}
@@ -129,7 +122,7 @@ const MainDashboard: React.FC<{ user: User; theme: Theme; toggleTheme: () => voi
         <div className="pointer-events-auto">
             <button
                 onClick={toggleTheme}
-                className="p-3 rounded-full bg-gray-200/80 dark:bg-gray-800/80 backdrop-blur-md shadow-lg text-gray-600 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950 focus:ring-blue-500 transition-transform duration-300 ease-in-out hover:scale-110"
+                className="p-3 rounded-full bg-surface-light dark:bg-surface-dark shadow-lg border border-border-color dark:border-border-dark text-text-secondary dark:text-text-secondary-dark hover:bg-primary-light/50 dark:hover:bg-primary/20 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-background-light dark:focus:ring-offset-background-dark focus:ring-primary hover:scale-110"
                 aria-label="Toggle theme"
             >
                 {theme === 'light' ? <MoonIcon /> : <SunIcon />}
@@ -140,7 +133,7 @@ const MainDashboard: React.FC<{ user: User; theme: Theme; toggleTheme: () => voi
         <div className="absolute bottom-4 right-4 sm:bottom-6 sm:right-6 pointer-events-auto">
             <button
                 onClick={handleSignOut}
-                className="p-3 rounded-full bg-red-600/90 backdrop-blur-md shadow-lg text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950 focus:ring-red-500 transition-transform duration-300 ease-in-out hover:scale-110"
+                className="p-3 rounded-full bg-surface-light dark:bg-surface-dark shadow-lg border border-border-color dark:border-border-dark text-error hover:text-white hover:bg-error focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-background-light dark:focus:ring-offset-background-dark focus:ring-error hover:scale-110"
                 aria-label="Sair"
             >
                 <LogoutIcon className="w-6 h-6" />
@@ -158,12 +151,12 @@ const AppHeader: React.FC<{
   onBackClick?: () => void;
 }> = ({ title, showBackButton, onBackClick }) => {
   return (
-    <header className="bg-white/70 dark:bg-gray-950/70 backdrop-blur-md p-4 flex justify-between items-center sticky top-0 z-10">
+    <header className="bg-surface-light/95 dark:bg-surface-dark/95 backdrop-blur-md px-6 lg:px-10 flex justify-between items-center sticky top-0 z-10 border-b border-border-color dark:border-border-dark h-[72px]">
       <div className="flex-1 flex justify-start">
         {showBackButton && (
           <button
             onClick={onBackClick}
-            className="flex items-center gap-2 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 font-bold focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950 focus:ring-blue-500 rounded-full p-2"
+            className="flex items-center gap-2 text-text-secondary dark:text-text-secondary-dark hover:text-text-primary dark:hover:text-text-primary-dark font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-surface-light dark:focus:ring-offset-background-dark focus:ring-primary rounded-lg p-2 -ml-2"
             aria-label="Voltar para Home"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
@@ -172,7 +165,7 @@ const AppHeader: React.FC<{
         )}
       </div>
 
-      <h1 className="text-2xl font-semibold text-gray-900 dark:text-white text-center mx-4 truncate">
+      <h1 className="text-2xl font-bold text-text-primary dark:text-text-primary-dark text-center mx-4 truncate">
         {title}
       </h1>
 
@@ -191,16 +184,14 @@ const HomePage: React.FC<{ setView: (view: View) => void; onNewOrderClick: () =>
         {
           title: "Novo Pedido",
           description: "Crie um novo pedido de compra.",
-          icon: <CartIcon className="w-6 h-6 text-white" />,
+          icon: <CartIcon className="w-6 h-6 text-primary-dark" />,
           onClick: onNewOrderClick,
-          color: 'purple'
         },
         {
           title: "Histórico de Pedidos",
           description: "Visualize, edite ou duplique seus pedidos salvos.",
-          icon: <HistoryIcon className="w-6 h-6 text-white" />,
+          icon: <HistoryIcon className="w-6 h-6 text-primary-dark" />,
           onClick: () => setView('my-orders'),
-          color: 'purple'
         },
       ]
     },
@@ -210,23 +201,20 @@ const HomePage: React.FC<{ setView: (view: View) => void; onNewOrderClick: () =>
         {
           title: "Catálogo de Produtos",
           description: "Consulte especificações e valores dos nossos modelos.",
-          icon: <BookIcon className="w-6 h-6 text-white" />,
+          icon: <BookIcon className="w-6 h-6 text-primary-dark" />,
           onClick: () => setView('models'),
-          color: 'green'
         },
         {
           title: "Pesquise com Barudex",
           description: "Tire suas dúvidas com nosso assistente inteligente.",
           icon: <BarudexIcon className="w-6 h-6" />,
           onClick: () => setView('chat'),
-          color: 'green'
         },
         {
           title: "Fale com Equipe",
           description: "Envie mensagens ou solicite suporte direto à nossa equipe.",
-          icon: <GlobalChatIcon className="w-6 h-6 text-white" />,
+          icon: <GlobalChatIcon className="w-6 h-6 text-primary-dark" />,
           onClick: () => setView('global-chat'),
-          color: 'green'
         },
       ]
     },
@@ -236,57 +224,38 @@ const HomePage: React.FC<{ setView: (view: View) => void; onNewOrderClick: () =>
         {
           title: "Ajuste da Taxa ($)",
           description: "Gerencie e atualize a taxa cambial de precificação.",
-          icon: <CurrencyIcon className="w-6 h-6 text-white" />,
+          icon: <CurrencyIcon className="w-6 h-6 text-primary-dark" />,
           onClick: () => setView('exchange-rate'),
-          color: 'amber'
         },
       ]
     }
   ];
 
-  const colorClasses = {
-    purple: {
-      card: 'bg-purple-50 dark:bg-purple-900/30 hover:bg-purple-100 dark:hover:bg-purple-900/50',
-      icon: 'bg-purple-500'
-    },
-    green: {
-      card: 'bg-green-50 dark:bg-green-900/30 hover:bg-green-100 dark:hover:bg-green-900/50',
-      icon: 'bg-green-500'
-    },
-    amber: {
-      card: 'bg-amber-50 dark:bg-amber-900/30 hover:bg-amber-100 dark:hover:bg-amber-900/50',
-      icon: 'bg-amber-500'
-    }
-  };
-
   return (
     <>
-      <AppHeader title="Central de Pedidos e Suporte Barudan" />
-      <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
-        <div className="max-w-6xl mx-auto space-y-10">
+      <AppHeader title="Central de Pedidos e Suporte" />
+      <main className="flex-1 overflow-y-auto p-6 lg:p-10">
+        <div className="max-w-7xl mx-auto space-y-12">
           {sections.map((section) => (
             <section key={section.title}>
-              <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200 mb-4">{section.title}</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                {section.items.map((item) => {
-                  const colors = colorClasses[item.color as keyof typeof colorClasses];
-                  return (
+              <h2 className="text-2xl font-bold text-text-primary dark:text-text-primary-dark mb-6">{section.title}</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {section.items.map((item) => (
                     <button
                       key={item.title}
                       onClick={item.onClick}
-                      className={`w-full p-5 rounded-2xl shadow-md hover:shadow-lg transform hover:-translate-y-1 transition-all duration-300 ease-in-out text-left flex items-center gap-4 ${colors.card}`}
+                      className="w-full p-6 rounded-2xl bg-surface-light dark:bg-surface-dark shadow-card hover:shadow-card-hover hover:bg-surface-hover-light dark:hover:bg-surface-dark/80 transform hover:-translate-y-1 text-left flex items-center gap-5 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background-light dark:focus:ring-offset-background-dark border border-border-color dark:border-border-dark"
                       aria-label={item.title}
                     >
-                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${colors.icon}`}>
+                      <div className="w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0 bg-primary-light dark:bg-primary/10">
                         {item.icon}
                       </div>
                       <div className="flex-1">
-                        <h3 className="text-md font-semibold text-gray-800 dark:text-gray-100">{item.title}</h3>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">{item.description}</p>
+                        <h3 className="text-lg font-semibold text-text-primary dark:text-text-primary-dark">{item.title}</h3>
+                        <p className="text-sm text-text-secondary dark:text-text-secondary-dark mt-1">{item.description}</p>
                       </div>
                     </button>
-                  );
-                })}
+                ))}
               </div>
             </section>
           ))}
@@ -458,41 +427,42 @@ const MachineModelsPage: React.FC<{ goToHome: () => void; referenceRate: number 
     const selectedModelDetails = selectedModelName ? modelsForSelectedProduct.find(m => m.name === selectedModelName) : null;
 
     let calculatedPrice = selectedModelDetails?.price;
-    let priceClasses = 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200';
+    let priceClasses = 'bg-border-color text-text-secondary dark:bg-border-dark dark:text-text-secondary-dark';
 
     if (selectedModelDetails?.jpyPrice && referenceRate !== null) {
         const brlPrice = selectedModelDetails.jpyPrice * referenceRate;
         calculatedPrice = `R$ ${brlPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-        priceClasses = 'bg-gradient-to-br from-blue-500 to-green-500 text-white';
+        priceClasses = 'bg-primary text-white';
     } else if (selectedModelDetails?.jpyPrice && referenceRate === null) {
         calculatedPrice = 'Defina a taxa';
-        priceClasses = 'bg-gradient-to-br from-amber-500 to-orange-500 text-white';
+        priceClasses = 'bg-warning text-white';
     }
 
+    const inputClass = "h-11 w-full bg-background-light dark:bg-surface-dark border border-border-color dark:border-border-dark rounded-lg py-2.5 px-3.5 text-text-primary dark:text-text-primary-dark placeholder-placeholder focus:outline-none focus:ring-2 focus:ring-primary focus:shadow-focus-ring";
 
     return (
         <>
             <AppHeader title="Modelos e Preços" showBackButton onBackClick={goToHome} />
-            <main className="flex-1 overflow-y-auto p-6">
+            <main className="flex-1 overflow-y-auto p-6 lg:p-10">
                 <div className="max-w-4xl mx-auto space-y-8">
                     {/* Selectors */}
-                    <div className="bg-gray-100 dark:bg-gray-800 p-6 rounded-3xl">
-                        <div className="text-center mb-5 pb-5 border-b border-gray-200 dark:border-gray-700">
-                             <p className="text-lg text-gray-500 dark:text-gray-400">Taxa de Precificação (JPY/BRL)</p>
+                    <div className="bg-surface-light dark:bg-surface-dark p-6 rounded-2xl shadow-card border border-border-color dark:border-border-dark">
+                        <div className="text-center mb-6 pb-6 border-b border-border-color dark:border-border-dark">
+                             <p className="text-sm font-medium text-text-subtle dark:text-text-secondary-dark mb-1">Taxa de Precificação (JPY/BRL)</p>
                             {referenceRate !== null ? (
-                                <p className="text-3xl font-bold text-gray-800 dark:text-gray-100">{referenceRate.toFixed(4)}</p>
+                                <p className="text-3xl font-bold text-text-primary dark:text-text-primary-dark">{referenceRate.toFixed(4)}</p>
                             ) : (
-                                <p className="text-sm text-amber-500 dark:text-amber-400">Defina a taxa na página 'Taxa JPY/BRL'.</p>
+                                <p className="text-base text-warning dark:text-warning font-semibold mt-1">Defina a taxa na página de Ajuste.</p>
                             )}
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
                             <div>
-                                <label htmlFor="product-select" className="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-2">Produto:</label>
+                                <label htmlFor="product-select" className="block text-xs font-medium text-text-subtle dark:text-text-secondary-dark mb-1">Produto:</label>
                                 <select
                                     id="product-select"
                                     value={selectedProduct}
                                     onChange={handleProductChange}
-                                    className="w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-xl py-3 px-4 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className={inputClass}
                                 >
                                     <option value="">Selecione um Produto</option>
                                     {productTypes.map(type => (
@@ -501,13 +471,13 @@ const MachineModelsPage: React.FC<{ goToHome: () => void; referenceRate: number 
                                 </select>
                             </div>
                             <div>
-                                <label htmlFor="model-select" className="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-2">Modelo:</label>
+                                <label htmlFor="model-select" className="block text-xs font-medium text-text-subtle dark:text-text-secondary-dark mb-1">Modelo:</label>
                                 <select
                                     id="model-select"
                                     value={selectedModelName}
                                     onChange={handleModelChange}
                                     disabled={!selectedProduct}
-                                    className="w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-xl py-3 px-4 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-200 dark:disabled:bg-gray-800/50 disabled:cursor-not-allowed"
+                                    className={`${inputClass} disabled:bg-border-color/50 dark:disabled:bg-surface-dark/50 disabled:cursor-not-allowed`}
                                 >
                                     <option value="">Selecione um Modelo</option>
                                     {modelsForSelectedProduct.map(model => (
@@ -520,14 +490,14 @@ const MachineModelsPage: React.FC<{ goToHome: () => void; referenceRate: number 
 
                     {/* Model Details */}
                     {selectedModelDetails && (
-                        <div className={`bg-gray-100 dark:bg-gray-800 p-8 rounded-3xl transition-all duration-500 ease-out ${isAnimatingDetails ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-5'}`}>
+                        <div className={`bg-surface-light dark:bg-surface-dark p-8 rounded-2xl shadow-card transition-all duration-500 ease-out border border-border-color dark:border-border-dark ${isAnimatingDetails ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-5'}`}>
                             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                                 <div>
-                                    <h3 className="text-3xl font-bold text-gray-900 dark:text-white">{selectedModelDetails.name}</h3>
-                                    <p className="text-md text-gray-500 dark:text-gray-400 mb-4">{selectedModelDetails.type}</p>
-                                    <p className="text-gray-600 dark:text-gray-300 text-base whitespace-pre-wrap">{selectedModelDetails.description}</p>
+                                    <h3 className="text-xl font-semibold text-text-primary dark:text-text-primary-dark">{selectedModelDetails.name}</h3>
+                                    <p className="text-md text-text-subtle dark:text-text-secondary-dark mb-4">{selectedModelDetails.type}</p>
+                                    <p className="text-text-secondary dark:text-text-secondary-dark text-base whitespace-pre-wrap leading-relaxed">{selectedModelDetails.description}</p>
                                 </div>
-                                <div className={`text-3xl font-bold ${priceClasses} px-6 py-4 rounded-2xl shadow-md whitespace-nowrap mt-4 md:mt-0`}>
+                                <div className={`text-3xl font-bold ${priceClasses} px-6 py-4 rounded-xl shadow-sm whitespace-nowrap mt-4 md:mt-0`}>
                                     {calculatedPrice}
                                 </div>
                             </div>
@@ -604,14 +574,14 @@ const ExchangeRatePage: React.FC<{
         const percentageDiff = ((currentRate - inputRateNum) / inputRateNum) * 100;
         
         if (Math.abs(percentageDiff) < 0.01) {
-             comparisonResult = { text: 'A taxa atual é igual à sua referência.', color: 'text-gray-500 dark:text-gray-400' };
+             comparisonResult = { text: 'A taxa atual é igual à sua referência.', color: 'text-text-subtle dark:text-text-secondary-dark' };
         } else if (percentageDiff > 0) {
-            comparisonResult = { text: `A taxa atual está ${percentageDiff.toFixed(2)}% acima da sua referência.`, color: 'text-emerald-600 dark:text-emerald-400' };
+            comparisonResult = { text: `A taxa atual está ${percentageDiff.toFixed(2)}% acima da sua referência.`, color: 'text-success' };
         } else {
-            comparisonResult = { text: `A taxa atual está ${Math.abs(percentageDiff).toFixed(2)}% abaixo da sua referência.`, color: 'text-red-600 dark:text-red-400' };
+            comparisonResult = { text: `A taxa atual está ${Math.abs(percentageDiff).toFixed(2)}% abaixo da sua referência.`, color: 'text-error' };
         }
     } else if (currentRate !== null && !isNaN(inputRateNum) && inputRate.trim() !== '' && inputRateNum <= 0) {
-        comparisonResult = { text: 'A referência deve ser maior que zero para comparação.', color: 'text-amber-600 dark:text-amber-400' };
+        comparisonResult = { text: 'A referência deve ser maior que zero para comparação.', color: 'text-warning' };
     }
 
 
@@ -619,18 +589,18 @@ const ExchangeRatePage: React.FC<{
         <>
             <AppHeader title="Cotação JPY/BRL" showBackButton onBackClick={goToHome} />
             <main className="flex-1 overflow-y-auto p-6 flex flex-col items-center">
-                <div className={`w-full max-w-lg bg-gray-100 dark:bg-gray-800 p-8 rounded-3xl space-y-6 mb-8 transition-all duration-500 ease-out ${isContentVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-5'}`}>
-                    {isLoading && <p className="text-center text-gray-500 dark:text-gray-400 animate-pulse">Buscando cotação atual...</p>}
-                    {error && <p className="text-center text-red-500">{error}</p>}
+                <div className={`w-full max-w-lg bg-surface-light dark:bg-surface-dark shadow-card p-8 rounded-2xl space-y-6 mb-8 border border-border-color dark:border-border-dark transition-all duration-500 ease-out ${isContentVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-5'}`}>
+                    {isLoading && <p className="text-center text-text-subtle dark:text-text-secondary-dark animate-pulse">Buscando cotação atual...</p>}
+                    {error && <p className="text-center text-error">{error}</p>}
                     {currentRate !== null && (
                         <>
                             <div>
-                                <p className="text-lg text-gray-500 dark:text-gray-400 text-center">Cotação Atual (Referência Google):</p>
-                                <p className="text-4xl font-bold text-gray-800 dark:text-gray-100 text-center my-2">{currentRate.toFixed(4)} BRL</p>
+                                <p className="text-base text-text-subtle dark:text-text-secondary-dark text-center">Cotação Atual (Referência Google):</p>
+                                <p className="text-4xl font-bold text-text-primary dark:text-text-primary-dark text-center my-2">{currentRate.toFixed(4)} BRL</p>
                             </div>
                             
-                            <div className="space-y-2">
-                                <label htmlFor="reference-rate" className="block text-sm font-medium text-gray-600 dark:text-gray-300">Taxa para Precificação</label>
+                            <div className="space-y-2 pt-2">
+                                <label htmlFor="reference-rate" className="block text-xs font-medium text-text-subtle dark:text-text-secondary-dark mb-1">Taxa para Precificação</label>
                                 <input
                                     id="reference-rate"
                                     type="number"
@@ -638,24 +608,24 @@ const ExchangeRatePage: React.FC<{
                                     value={inputRate}
                                     onChange={(e) => setInputRate(e.target.value)}
                                     placeholder="Ex: 0.0340"
-                                    className="w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-xl py-3 px-4 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="h-11 w-full bg-background-light dark:bg-surface-dark border border-border-color dark:border-border-dark rounded-lg py-2.5 px-3.5 text-text-primary dark:text-text-primary-dark placeholder-placeholder focus:outline-none focus:ring-2 focus:ring-primary focus:shadow-focus-ring"
                                     aria-describedby="rate-description"
                                 />
-                                <p id="rate-description" className="text-xs text-gray-500 dark:text-gray-400">
+                                <p id="rate-description" className="text-xs text-text-subtle dark:text-text-secondary-dark pt-1">
                                     Esta taxa será a praticada para precificar os modelos, não a cotação atual do Google.
                                 </p>
                             </div>
 
                             {comparisonResult && (
                                 <div className="text-center h-6">
-                                    <p className={`text-md font-semibold ${comparisonResult.color}`}>{comparisonResult.text}</p>
+                                    <p className={`text-sm font-medium ${comparisonResult.color}`}>{comparisonResult.text}</p>
                                 </div>
                             )}
 
                             <button 
                                 onClick={handleSave} 
                                 disabled={isSaving || parseFloat(inputRate) === savedReferenceRate}
-                                className="w-full flex justify-center py-3 px-4 border border-transparent rounded-full shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950 focus:ring-blue-500 disabled:bg-gray-400 dark:disabled:bg-gray-600 disabled:opacity-75 disabled:cursor-not-allowed"
+                                className="w-full h-11 flex justify-center items-center px-4 border border-transparent rounded-lg text-sm font-medium text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-surface-light dark:focus:ring-offset-surface-dark focus:ring-primary disabled:bg-gray-400 dark:disabled:bg-gray-600 disabled:opacity-75 disabled:cursor-not-allowed"
                             >
                                 {isSaving ? 'Salvando...' : 'Salvar Taxa de Referência'}
                             </button>
@@ -664,16 +634,16 @@ const ExchangeRatePage: React.FC<{
                 </div>
                 
                 {history.length > 0 && (
-                     <div className={`w-full max-w-lg bg-gray-100 dark:bg-gray-800 p-8 rounded-3xl transition-all duration-500 ease-out ${isContentVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-5'}`} style={{transitionDelay: '150ms'}}>
-                        <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4 text-center">Histórico de Alterações</h3>
+                     <div className={`w-full max-w-lg bg-surface-light dark:bg-surface-dark shadow-card p-8 rounded-2xl border border-border-color dark:border-border-dark transition-all duration-500 ease-out ${isContentVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-5'}`} style={{transitionDelay: '150ms'}}>
+                        <h3 className="text-xl font-bold text-text-primary dark:text-text-primary-dark mb-4 text-center">Histórico de Alterações</h3>
                         <ul className="space-y-3 max-h-60 overflow-y-auto pr-2">
                             {history.map(entry => (
-                                <li key={entry.id} className="text-sm p-3 bg-white dark:bg-gray-700/50 rounded-xl flex justify-between items-center">
+                                <li key={entry.id} className="text-sm p-3 bg-surface-container dark:bg-surface-container-dark border border-border-color dark:border-border-dark rounded-xl flex justify-between items-center">
                                     <div>
-                                        <p className="font-bold text-gray-800 dark:text-gray-100">{entry.rate.toFixed(4)} BRL</p>
-                                        <p className="text-gray-500 dark:text-gray-400 text-xs">por: {entry.updatedBy}</p>
+                                        <p className="font-bold text-text-primary dark:text-text-primary-dark">{entry.rate.toFixed(4)} BRL</p>
+                                        <p className="text-text-subtle dark:text-text-secondary-dark text-xs">por: {entry.updatedBy}</p>
                                     </div>
-                                    <p className="text-gray-400 dark:text-gray-500 text-xs">
+                                    <p className="text-text-subtle dark:text-text-secondary-dark text-xs">
                                         {entry.updatedAt ? new Date(entry.updatedAt.seconds * 1000).toLocaleString('pt-BR') : ''}
                                     </p>
                                 </li>
@@ -791,13 +761,13 @@ const GlobalChatPage: React.FC<{ user: User; goToHome: () => void; }> = ({ user,
                             onChange={(e) => setNewMessage(e.target.value)}
                             placeholder="Digite sua mensagem..."
                             disabled={isLoading}
-                            className="flex-1 bg-gray-200 dark:bg-gray-800 border-transparent rounded-full py-3 px-5 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="flex-1 h-11 bg-surface-light dark:bg-surface-dark border border-border-color dark:border-border-dark rounded-lg py-2.5 px-5 text-text-primary dark:text-text-primary-dark placeholder-placeholder focus:outline-none focus:ring-2 focus:ring-primary focus:shadow-focus-ring"
                             aria-label="Caixa de mensagem"
                         />
                         <button
                             type="submit"
                             disabled={isLoading || !newMessage.trim()}
-                            className="bg-blue-600 text-white rounded-full p-3 hover:bg-blue-700 disabled:bg-gray-400 dark:disabled:bg-gray-600 disabled:cursor-not-allowed"
+                            className="h-11 w-11 flex-shrink-0 bg-primary text-white rounded-lg flex items-center justify-center hover:bg-primary-dark disabled:bg-gray-400 dark:disabled:bg-gray-600 disabled:cursor-not-allowed"
                             aria-label="Enviar mensagem"
                         >
                             <svg className="w-6 h-6 transform rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
@@ -852,7 +822,7 @@ const OrderPage: React.FC<{ goToHome: () => void; user: User; initialOrder: Orde
     }
   }, [isViewMode]);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
@@ -887,26 +857,26 @@ const OrderPage: React.FC<{ goToHome: () => void; user: User; initialOrder: Orde
     }
   };
 
-  const inputClass = "text-sm w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg py-1.5 px-2 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500 read-only:bg-gray-200 dark:read-only:bg-gray-800/50";
-  const labelClass = "block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1";
+  const inputClass = "h-11 text-sm w-full bg-background-light dark:bg-surface-dark border border-border-color dark:border-border-dark rounded-lg py-2.5 px-3 text-text-primary dark:text-text-primary-dark placeholder-placeholder focus:outline-none focus:ring-2 focus:ring-primary focus:shadow-focus-ring read-only:bg-border-color/40 dark:read-only:bg-surface-dark/50";
+  const labelClass = "block text-xs font-medium text-text-subtle dark:text-text-secondary-dark mb-1";
   
   return (
     <>
       <AppHeader title={isViewMode ? "Detalhes do Pedido" : "Gerar Pedido"} showBackButton onBackClick={goToHome} />
-      <main className="flex-1 overflow-y-auto p-2 sm:p-4">
-        <form onSubmit={handleSubmit} id="order-form-container" className="max-w-3xl mx-auto space-y-3 mb-24 p-4 bg-white dark:bg-gray-800 shadow-lg rounded-xl">
+      <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-10">
+        <form onSubmit={handleSubmit} id="order-form-container" className="max-w-4xl mx-auto space-y-6 mb-24 p-6 sm:p-8 bg-surface-light dark:bg-surface-dark shadow-card rounded-2xl border border-border-color dark:border-border-dark">
             
-            <div className="flex flex-row justify-between items-start gap-4 border-b border-gray-200 dark:border-gray-700 pb-3">
-                <div className="text-left text-[10px] leading-tight text-gray-600 dark:text-gray-400 space-y-0.5">
-                    <h2 className="text-base font-bold text-gray-900 dark:text-white mb-1">Barudan do Brasil Com. e Ind. Ltda.</h2>
+            <div className="flex flex-col sm:flex-row justify-between items-start gap-6 border-b border-border-color dark:border-border-dark pb-6 mb-6">
+                <div className="text-left text-xs leading-normal text-text-subtle dark:text-text-secondary-dark space-y-1">
+                    <h2 className="text-lg font-bold text-text-primary dark:text-text-primary-dark mb-2">Barudan do Brasil Com. e Ind. Ltda.</h2>
                     <p>Av. Gomes Freire, 574 - Centro Rio de Janeiro - RJ - Cep: 20231-015</p>
                     <p>Tel.: (21) 2506-0050 - Fax: (21) 2506-0070</p>
                     <p>Website: www.barudan.com.br - E-mail: sac@barudan.com.br</p>
                     <p>CNPJ: 40.375.636/0001-32 - Inscrição Estadual: 84.369.381</p>
                 </div>
                 
-                <div className="flex-shrink-0 w-auto">
-                    <div className="grid grid-cols-2 gap-x-2 gap-y-2">
+                <div className="flex-shrink-0 w-full sm:w-auto">
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-4">
                         <div><label htmlFor="PEDIDO_NUMERO" className={labelClass}>Nº Pedido</label><input type="text" name="PEDIDO_NUMERO" id="PEDIDO_NUMERO" value={formData.PEDIDO_NUMERO} className={inputClass} readOnly /></div>
                         <div><label htmlFor="PEDIDO_DATA" className={labelClass}>Data</label><input type="date" name="PEDIDO_DATA" id="PEDIDO_DATA" value={formData.PEDIDO_DATA} onChange={handleInputChange} className={inputClass} readOnly={isViewMode} /></div>
                         <div className="col-span-2"><label htmlFor="VENDEDOR_NOME" className={labelClass}>Vendedor</label><input type="text" name="VENDEDOR_NOME" id="VENDEDOR_NOME" value={formData.VENDEDOR_NOME} onChange={handleInputChange} className={inputClass} readOnly={isViewMode} /></div>
@@ -916,8 +886,8 @@ const OrderPage: React.FC<{ goToHome: () => void; user: User; initialOrder: Orde
             </div>
 
             <section>
-                <h2 className="text-base font-semibold mb-2 text-gray-800 dark:text-gray-200">Dados do Cliente</h2>
-                <div className="grid grid-cols-12 gap-x-3 gap-y-2">
+                <h2 className="text-xl font-bold mb-4 text-text-primary dark:text-text-primary-dark">Dados do Cliente</h2>
+                <div className="grid grid-cols-12 gap-x-4 gap-y-4">
                     <div className="col-span-12">
                         <label htmlFor="CLIENTE_RAZAO_SOCIAL" className={labelClass}>Razão Social</label>
                         <input type="text" name="CLIENTE_RAZAO_SOCIAL" id="CLIENTE_RAZAO_SOCIAL" value={formData.CLIENTE_RAZAO_SOCIAL} onChange={handleInputChange} className={inputClass} readOnly={isViewMode} />
@@ -966,31 +936,31 @@ const OrderPage: React.FC<{ goToHome: () => void; user: User; initialOrder: Orde
             </section>
 
             <section>
-                <h2 className="text-base font-semibold mb-2 text-gray-800 dark:text-gray-200">Produto / Observações</h2>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-x-3 gap-y-2">
+                <h2 className="text-xl font-bold mb-4 text-text-primary dark:text-text-primary-dark">Produto / Observações</h2>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-x-4 gap-y-4">
                      <div className="md:col-span-1"><label htmlFor="PRODUTO_QUANTIDADE" className={labelClass}>Quantidade</label><input type="number" name="PRODUTO_QUANTIDADE" id="PRODUTO_QUANTIDADE" value={formData.PRODUTO_QUANTIDADE} onChange={handleInputChange} className={inputClass} readOnly={isViewMode} /></div>
-                     <div className="md:col-span-3"><label htmlFor="PRODUTO_DESCRICAO" className={labelClass}>Descrição do Produto</label><textarea name="PRODUTO_DESCRICAO" id="PRODUTO_DESCRICAO" value={formData.PRODUTO_DESCRICAO} onChange={handleInputChange} className={`${inputClass} h-20`} readOnly={isViewMode}></textarea></div>
-                     <div className="md:col-span-4"><label htmlFor="OBSERVACAO_GERAL" className={labelClass}>Observação Geral</label><textarea name="OBSERVACAO_GERAL" id="OBSERVACAO_GERAL" value={formData.OBSERVACAO_GERAL} onChange={handleInputChange} className={`${inputClass} h-20`} readOnly={isViewMode}></textarea></div>
+                     <div className="md:col-span-3"><label htmlFor="PRODUTO_DESCRICAO" className={labelClass}>Descrição do Produto</label><textarea name="PRODUTO_DESCRICAO" id="PRODUTO_DESCRICAO" value={formData.PRODUTO_DESCRICAO} onChange={handleInputChange} className={`${inputClass} h-24`} readOnly={isViewMode}></textarea></div>
+                     <div className="md:col-span-4"><label htmlFor="OBSERVACAO_GERAL" className={labelClass}>Observação Geral</label><textarea name="OBSERVACAO_GERAL" id="OBSERVACAO_GERAL" value={formData.OBSERVACAO_GERAL} onChange={handleInputChange} className={`${inputClass} h-24`} readOnly={isViewMode}></textarea></div>
                 </div>
             </section>
             
             <section>
-                <h2 className="text-base font-semibold mb-2 text-gray-800 dark:text-gray-200">Condições Comerciais</h2>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-x-3 gap-y-2">
+                <h2 className="text-xl font-bold mb-4 text-text-primary dark:text-text-primary-dark">Condições Comerciais</h2>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-x-4 gap-y-4">
                     <div><label htmlFor="PEDIDO_VALOR_TOTAL" className={labelClass}>Valor Total (R$)</label><input type="text" name="PEDIDO_VALOR_TOTAL" id="PEDIDO_VALOR_TOTAL" value={formData.PEDIDO_VALOR_TOTAL} onChange={handleInputChange} className={inputClass} readOnly={isViewMode} /></div>
                 </div>
             </section>
 
             <section>
-                <h2 className="text-base font-semibold mb-2 text-gray-800 dark:text-gray-200">Transporte</h2>
+                <h2 className="text-xl font-bold mb-4 text-text-primary dark:text-text-primary-dark">Transporte</h2>
                 <div className="grid grid-cols-1">
                     <div><label htmlFor="TRANSPORTADORA" className={labelClass}>Transportadora</label><input type="text" name="TRANSPORTADORA" id="TRANSPORTADORA" value={formData.TRANSPORTADORA} onChange={handleInputChange} className={inputClass} readOnly={isViewMode} /></div>
                 </div>
             </section>
 
 
-            <div className="pt-4 flex justify-end">
-                <button type="submit" disabled={isSaving} className="w-full sm:w-auto flex justify-center py-2 px-6 border border-transparent rounded-full shadow-sm text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-800 focus:ring-blue-500 disabled:bg-gray-400 dark:disabled:bg-gray-600">
+            <div className="pt-6 flex justify-end">
+                <button type="submit" disabled={isSaving} className="w-full sm:w-auto h-11 flex justify-center items-center px-8 border border-transparent rounded-lg text-sm font-medium text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-surface-light dark:focus:ring-offset-surface-dark focus:ring-primary disabled:bg-gray-400 dark:disabled:bg-gray-600">
                     {isSaving ? 'Processando...' : (isViewMode ? 'Baixar PDF Novamente' : 'Salvar e Gerar PDF')}
                 </button>
             </div>
@@ -1040,13 +1010,13 @@ const MyOrdersPage: React.FC<{ goToHome: () => void; user: User; onSelectOrder: 
     return (
         <>
             <AppHeader title="Meus Pedidos" showBackButton onBackClick={goToHome} />
-            <main className="flex-1 overflow-y-auto p-4 sm:p-6">
+            <main className="flex-1 overflow-y-auto p-6 lg:p-10">
                 <div className="max-w-4xl mx-auto space-y-4">
                      {!isLoading && orders.length > 0 && (
-                        <div className="flex justify-end mb-2">
+                        <div className="flex justify-end mb-4">
                             <button
                                 onClick={handleDeleteAllOrders}
-                                className="flex items-center gap-2 text-sm text-red-500 bg-red-100/50 dark:text-red-400 dark:bg-red-900/40 hover:bg-red-100 dark:hover:bg-red-900/80 font-semibold px-4 py-2 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-800 focus:ring-red-500"
+                                className="flex items-center gap-2 text-sm text-error bg-transparent border border-error hover:bg-error/10 font-semibold px-4 py-2 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-background-light dark:focus:ring-offset-background-dark focus:ring-error"
                                 aria-label="Excluir todos os pedidos e reiniciar contagem"
                             >
                                 <TrashIcon className="w-4 h-4" />
@@ -1054,40 +1024,40 @@ const MyOrdersPage: React.FC<{ goToHome: () => void; user: User; onSelectOrder: 
                             </button>
                         </div>
                     )}
-                    {isLoading && <p className="text-center text-gray-500 dark:text-gray-400 animate-pulse">Carregando pedidos...</p>}
+                    {isLoading && <p className="text-center text-text-subtle dark:text-text-secondary-dark animate-pulse py-16">Carregando pedidos...</p>}
                     {!isLoading && orders.length === 0 && (
-                        <div className="text-center py-10 bg-gray-100 dark:bg-gray-800 rounded-3xl">
-                            <p className="text-lg text-gray-600 dark:text-gray-300">Você ainda não tem pedidos salvos.</p>
-                            <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">Crie um novo pedido na tela inicial.</p>
+                        <div className="text-center py-20 bg-surface-container dark:bg-surface-container-dark rounded-2xl border border-border-color dark:border-border-dark">
+                            <p className="text-lg text-text-secondary dark:text-text-secondary-dark">Você ainda não tem pedidos salvos.</p>
+                            <p className="text-sm text-text-subtle dark:text-text-secondary-dark mt-2">Crie um novo pedido na tela inicial.</p>
                         </div>
                     )}
                     {orders.map(order => (
                         <div
                             key={order.id}
-                            className="w-full flex items-center justify-between text-left p-4 bg-gray-100 dark:bg-gray-800 rounded-2xl"
+                            className="w-full flex items-center justify-between text-left p-4 bg-surface-light dark:bg-surface-dark shadow-card rounded-xl border border-border-color dark:border-border-dark hover:shadow-card-hover hover:bg-surface-hover-light dark:hover:bg-surface-dark/80"
                         >
                             <div
                                 onClick={() => onSelectOrder(order)}
-                                className="flex-1 flex items-center justify-between text-left cursor-pointer hover:bg-gray-200/50 dark:hover:bg-gray-700/60 -m-4 p-4 rounded-l-2xl transition-colors"
+                                className="flex-1 flex items-center justify-between text-left cursor-pointer -m-4 p-4 rounded-l-xl"
                                 role="button"
                                 tabIndex={0}
                                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onSelectOrder(order); }}
                                 aria-label={`Ver detalhes do pedido ${order.PEDIDO_NUMERO || 'N/A'}`}
                             >
                                 <div>
-                                    <p className="font-semibold text-gray-800 dark:text-gray-100">Pedido Nº: {order.PEDIDO_NUMERO || 'N/A'}</p>
-                                    <p className="text-sm text-gray-500 dark:text-gray-400">Cliente: {order.CLIENTE_RAZAO_SOCIAL}</p>
+                                    <p className="font-semibold text-text-primary dark:text-text-primary-dark">Pedido Nº: {order.PEDIDO_NUMERO || 'N/A'}</p>
+                                    <p className="text-sm text-text-secondary dark:text-text-secondary-dark mt-1">Cliente: {order.CLIENTE_RAZAO_SOCIAL}</p>
                                 </div>
                                 <div className="text-right">
-                                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                                    <p className="text-sm text-text-subtle dark:text-text-secondary-dark">
                                         {order.createdAt ? new Date(order.createdAt.seconds * 1000).toLocaleDateString('pt-BR') : ''}
                                     </p>
-                                    <span className="text-blue-500 text-sm font-semibold">Ver Detalhes</span>
+                                    <span className="text-primary text-sm font-semibold mt-1 block">Ver Detalhes</span>
                                 </div>
                             </div>
                              <button
                                 onClick={() => handleDeleteOrder(order.id)}
-                                className="ml-4 flex-shrink-0 p-2 rounded-full text-gray-400 hover:bg-red-100 dark:hover:bg-red-900/40 hover:text-red-500 dark:hover:text-red-400 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-100 dark:focus:ring-offset-gray-800 focus:ring-red-500"
+                                className="ml-4 flex-shrink-0 p-2 rounded-full text-text-subtle hover:bg-error/10 dark:hover:bg-error/20 hover:text-error dark:hover:text-error focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-surface-light dark:focus:ring-offset-surface-dark focus:ring-error"
                                 aria-label={`Excluir pedido ${order.PEDIDO_NUMERO || 'N/A'}`}
                             >
                                 <TrashIcon className="w-5 h-5" />
