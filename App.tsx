@@ -795,6 +795,7 @@ const OrderPage: React.FC<{ goToHome: () => void; user: User; initialOrder: Orde
     CLIENTE_CIDADE: initialOrder?.CLIENTE_CIDADE || '',
     CLIENTE_UF: initialOrder?.CLIENTE_UF || '',
     CLIENTE_TELEFONE: initialOrder?.CLIENTE_TELEFONE || '',
+    CLIENTE_EMAIL: initialOrder?.CLIENTE_EMAIL || '',
     CLIENTE_CONTATO_AC: initialOrder?.CLIENTE_CONTATO_AC || '',
     TRANSPORTADORA: initialOrder?.TRANSPORTADORA || '',
     PRODUTO_QUANTIDADE: initialOrder?.PRODUTO_QUANTIDADE || '1',
@@ -901,6 +902,11 @@ const OrderPage: React.FC<{ goToHome: () => void; user: User; initialOrder: Orde
                     <div className="col-span-12 md:col-span-7">
                         <label htmlFor="CLIENTE_TELEFONE" className={labelClass}>Telefone</label>
                         <input type="tel" name="CLIENTE_TELEFONE" id="CLIENTE_TELEFONE" value={formData.CLIENTE_TELEFONE} onChange={handleInputChange} className={inputClass} readOnly={isViewMode} maxLength={20} />
+                    </div>
+
+                    <div className="col-span-12">
+                        <label htmlFor="CLIENTE_EMAIL" className={labelClass}>E-mail</label>
+                        <input type="email" name="CLIENTE_EMAIL" id="CLIENTE_EMAIL" value={formData.CLIENTE_EMAIL} onChange={handleInputChange} className={inputClass} readOnly={isViewMode} />
                     </div>
 
                     <div className="col-span-12">
