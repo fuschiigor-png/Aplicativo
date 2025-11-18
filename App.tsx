@@ -270,6 +270,7 @@ const HomePage: React.FC<{ setView: (view: View) => void; onNewOrderClick: () =>
 
 // Data for machine models, organized by product type
 const machineData: Record<string, { name: string; type: string; price: string; description: string; jpyPrice?: number }[]> = {
+  // ... (data remains same, truncated for brevity in diff but included in full file)
   '01 Cabeça': [
     { 
       name: 'BEKT-S1501CA II', 
@@ -399,7 +400,7 @@ const machineData: Record<string, { name: string; type: string; price: string; d
       { name: 'Bastidor Magnético 15x15cm', type: 'Acessório', price: 'R$ 450,00', description: 'Facilita a fixação de tecidos difíceis.' },
   ]
 };
-
+// ... (rest of components: MachineModelsPage, ExchangeRatePage, ChatPage, GlobalChatPage remain unchanged)
 const productTypes = Object.keys(machineData);
 
 // MachineModelsPage: Displays product categories and then specific models
@@ -793,6 +794,7 @@ const GlobalChatPage: React.FC<{ user: User; goToHome: () => void; }> = ({ user,
 const MyOrdersPage: React.FC<{ goToHome: () => void; user: User; onSelectOrder: (order: Order) => void; }> = ({ goToHome, user, onSelectOrder }) => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     const unsubscribe = getOrdersListener(user.uid, (fetchedOrders) => {
@@ -806,11 +808,14 @@ const MyOrdersPage: React.FC<{ goToHome: () => void; user: User; onSelectOrder: 
       e.stopPropagation();
       e.nativeEvent.stopImmediatePropagation();
       if (window.confirm("Tem certeza que deseja excluir este pedido?")) {
+          setDeletingId(orderId);
           try {
               await deleteOrder(orderId);
-          } catch (error) {
+          } catch (error: any) {
               console.error("Error deleting order:", error);
-              alert("Erro ao excluir pedido.");
+              alert(`Erro ao excluir pedido: ${error.message || "Erro desconhecido"}`);
+          } finally {
+              setDeletingId(null);
           }
       }
   };
@@ -870,10 +875,15 @@ const MyOrdersPage: React.FC<{ goToHome: () => void; user: User; onSelectOrder: 
                                  </div>
                                  <button
                                     onClick={(e) => handleDelete(order.id, e)}
-                                    className="text-text-subtle dark:text-text-secondary-dark hover:text-error p-2 rounded-full hover:bg-surface-container dark:hover:bg-surface-container-dark transition-colors z-30 relative -mr-2 -mt-2"
+                                    disabled={deletingId === order.id}
+                                    className="text-text-subtle dark:text-text-secondary-dark hover:text-error p-2 rounded-full hover:bg-surface-container dark:hover:bg-surface-container-dark transition-colors z-30 relative -mr-2 -mt-2 disabled:opacity-50"
                                     title="Excluir"
                                  >
-                                     <TrashIcon className="w-5 h-5" />
+                                     {deletingId === order.id ? (
+                                         <span className="w-5 h-5 block border-2 border-text-subtle border-t-transparent rounded-full animate-spin"></span>
+                                     ) : (
+                                        <TrashIcon className="w-5 h-5" />
+                                     )}
                                  </button>
                              </div>
                              
@@ -1004,9 +1014,9 @@ const OrderPage: React.FC<{ goToHome: () => void; user: User; initialOrder: Orde
         try {
             await deleteOrder(currentOrderId);
             goToHome(); // Redirect to home after deletion
-        } catch (error) {
+        } catch (error: any) {
              console.error("Falha ao excluir o pedido:", error);
-             alert("Ocorreu um erro ao excluir o pedido.");
+             alert(`Ocorreu um erro ao excluir o pedido: ${error.message || "Erro desconhecido"}`);
         }
     }
   }

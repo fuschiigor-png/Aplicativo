@@ -185,6 +185,9 @@ export const getNextOrderNumber = async (): Promise<string> => {
 
 // Delete an order from the database
 export const deleteOrder = async (orderId: string): Promise<void> => {
+    if (!orderId) {
+        throw new Error("ID do pedido inválido.");
+    }
     try {
         const orderDocRef = doc(db, ORDERS_COLLECTION, orderId);
         await deleteDoc(orderDocRef);
