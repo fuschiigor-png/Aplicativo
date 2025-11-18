@@ -7,7 +7,7 @@ import { Message, MessageSender, GlobalChatMessage as GlobalChatMessageType, Exc
 import ChatInput from './components/ChatInput';
 import ChatMessage from './components/ChatMessage';
 import GlobalChatMessage from './components/GlobalChatMessage';
-import { generateChatResponse, getExchangeRate } from './services/geminiService';
+import { generateChatResponse, getExchangeRate, resetChatSession } from './services/geminiService';
 import { getMessagesListener, sendGlobalMessage, getExchangeRateConfigListener, getExchangeRateHistoryListener, updateExchangeRateConfig, saveOrder, getOrdersListener, deleteOrder, getNextOrderNumber, deleteAllOrdersAndResetCounter } from './services/chatService';
 import { BarudexIcon, MoonIcon, SunIcon, ModelsIcon, GlobalChatIcon, ExchangeRateIcon, LogoutIcon, DocumentIcon, HistoryIcon, TrashIcon, CartIcon, BookIcon, CurrencyIcon } from './components/Icons';
 import { generateOrderPdf } from './services/pdfService';
@@ -404,116 +404,108 @@ const productTypes = Object.keys(machineData);
 // MachineModelsPage: Displays product categories and then specific models
 const MachineModelsPage: React.FC<{ goToHome: () => void; referenceRate: number | null; }> = ({ goToHome, referenceRate }) => {
     const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-    const [isAnimating, setIsAnimating] = useState(false);
 
-    useEffect(() => {
-        setIsAnimating(false);
-        const timer = setTimeout(() => setIsAnimating(true), 50); // Re-trigger animation on view change
-        return () => clearTimeout(timer);
-    }, [selectedCategory]);
-
-    const handleSelectCategory = (category: string) => {
-        setSelectedCategory(category);
-    };
-
-    const handleBackToCategories = () => {
-        setSelectedCategory(null);
-    };
-
-    // View for showing product categories
-    const renderCategoryView = () => (
-        <div className={`max-w-5xl mx-auto transition-opacity duration-500 ease-out ${isAnimating ? 'opacity-100' : 'opacity-0'}`}>
-             <div className="text-center mb-10">
+    // Sub-component for listing categories
+    const CategoryListPage = () => (
+        <div className="max-w-4xl mx-auto space-y-4">
+            <div className="text-center mb-10">
                 <h2 className="text-3xl font-bold text-text-primary dark:text-text-primary-dark">Nossos Produtos</h2>
                 <p className="mt-2 text-lg text-text-secondary dark:text-text-secondary-dark">Selecione uma categoria para ver os modelos disponíveis.</p>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {productTypes.map((category, index) => (
+
+            <div className="text-center mb-8 pb-4 border-b border-border-color dark:border-border-dark">
+                <p className="text-sm font-medium text-text-subtle dark:text-text-secondary-dark mb-1">Taxa de Precificação (JPY/BRL)</p>
+                {referenceRate !== null ? (
+                    <p className="text-3xl font-bold text-text-primary dark:text-text-primary-dark">{referenceRate.toFixed(4)}</p>
+                ) : (
+                    <p className="text-base text-warning dark:text-warning font-semibold mt-1">Defina a taxa na página de Ajuste.</p>
+                )}
+            </div>
+
+            <div className="space-y-4">
+                {productTypes.map((category) => (
                     <button
                         key={category}
-                        onClick={() => handleSelectCategory(category)}
-                        className="w-full p-6 rounded-2xl bg-surface-light dark:bg-surface-dark shadow-card hover:shadow-card-hover hover:bg-surface-hover-light dark:hover:bg-surface-dark/80 transform hover:-translate-y-1 text-left flex flex-col justify-between focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background-light dark:focus:ring-offset-background-dark border border-border-color dark:border-border-dark"
-                        style={{ transitionDelay: `${index * 50}ms` }}
+                        onClick={() => setSelectedCategory(category)}
+                        className="w-full p-6 rounded-2xl bg-surface-light dark:bg-surface-dark shadow-card hover:shadow-card-hover hover:bg-surface-hover-light dark:hover:bg-surface-dark/80 transform hover:-translate-y-1 text-left flex justify-between items-center focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background-light dark:focus:ring-offset-background-dark border border-border-color dark:border-border-dark"
                         aria-label={`Ver modelos de ${category}`}
                     >
                         <div>
                             <h3 className="text-xl font-semibold text-text-primary dark:text-text-primary-dark">{category}</h3>
                             <p className="text-sm text-text-secondary dark:text-text-secondary-dark mt-2">{machineData[category].length} {machineData[category].length > 1 ? 'modelos disponíveis' : 'modelo disponível'}</p>
                         </div>
-                        <div className="mt-4 text-primary dark:text-primary-light font-medium flex items-center gap-2">
-                           <span>Ver Modelos</span>
-                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
-                        </div>
+                        <svg className="w-6 h-6 text-text-subtle dark:text-text-secondary-dark" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"></path>
+                        </svg>
                     </button>
                 ))}
             </div>
         </div>
     );
 
-    // View for showing models within a category
-    const renderModelsView = () => {
-        if (!selectedCategory) return null;
-        const models = machineData[selectedCategory];
+    // Sub-component for displaying models of a selected category
+    const ModelDetailsPage: React.FC<{ category: string; onBack: () => void; }> = ({ category }) => (
+        <div className="max-w-4xl mx-auto space-y-6">
+             <div className="text-center mb-8 pb-4 border-b border-border-color dark:border-border-dark">
+                <p className="text-sm font-medium text-text-subtle dark:text-text-secondary-dark mb-1">Taxa de Precificação (JPY/BRL)</p>
+                {referenceRate !== null ? (
+                    <p className="text-3xl font-bold text-text-primary dark:text-text-primary-dark">{referenceRate.toFixed(4)}</p>
+                ) : (
+                    <p className="text-base text-warning dark:text-warning font-semibold mt-1">Defina a taxa na página de Ajuste.</p>
+                )}
+            </div>
+            {machineData[category].map((model) => {
+                let calculatedPrice = model.price;
+                let priceClasses = 'bg-border-color text-text-secondary dark:bg-border-dark dark:text-text-secondary-dark';
 
-        return (
-            <div className={`max-w-4xl mx-auto space-y-6 transition-opacity duration-500 ease-out ${isAnimating ? 'opacity-100' : 'opacity-0'}`}>
-                 <div className="text-center mb-4 pb-4 border-b border-border-color dark:border-border-dark">
-                    <p className="text-sm font-medium text-text-subtle dark:text-text-secondary-dark mb-1">Taxa de Precificação (JPY/BRL)</p>
-                    {referenceRate !== null ? (
-                        <p className="text-3xl font-bold text-text-primary dark:text-text-primary-dark">{referenceRate.toFixed(4)}</p>
-                    ) : (
-                        <p className="text-base text-warning dark:text-warning font-semibold mt-1">Defina a taxa na página de Ajuste.</p>
-                    )}
-                </div>
-                {models.map((model, index) => {
-                    let calculatedPrice = model.price;
-                    let priceClasses = 'bg-border-color text-text-secondary dark:bg-border-dark dark:text-text-secondary-dark';
+                if (model.jpyPrice && referenceRate !== null) {
+                    const brlPrice = model.jpyPrice * referenceRate;
+                    calculatedPrice = `R$ ${brlPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                    priceClasses = 'bg-primary text-white';
+                } else if (model.jpyPrice && referenceRate === null) {
+                    calculatedPrice = 'Defina a taxa';
+                    priceClasses = 'bg-warning text-white';
+                }
 
-                    if (model.jpyPrice && referenceRate !== null) {
-                        const brlPrice = model.jpyPrice * referenceRate;
-                        calculatedPrice = `R$ ${brlPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-                        priceClasses = 'bg-primary text-white';
-                    } else if (model.jpyPrice && referenceRate === null) {
-                        calculatedPrice = 'Defina a taxa';
-                        priceClasses = 'bg-warning text-white';
-                    }
-
-                    return (
-                        <div 
-                            key={model.name} 
-                            className="bg-surface-light dark:bg-surface-dark p-6 rounded-2xl shadow-card border border-border-color dark:border-border-dark"
-                            style={{ transitionDelay: `${index * 50}ms` }}
-                        >
-                            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-                                <div>
-                                    <h3 className="text-xl font-semibold text-text-primary dark:text-text-primary-dark">{model.name}</h3>
-                                    <p className="text-md text-text-subtle dark:text-text-secondary-dark mb-4">{model.type}</p>
-                                    <p className="text-text-secondary dark:text-text-secondary-dark text-base whitespace-pre-wrap leading-relaxed">{model.description}</p>
-                                </div>
-                                <div className={`text-2xl font-bold ${priceClasses} px-5 py-3 rounded-xl shadow-sm whitespace-nowrap mt-4 md:mt-0`}>
-                                    {calculatedPrice}
-                                </div>
+                return (
+                    <div 
+                        key={model.name} 
+                        className="bg-surface-container dark:bg-surface-container-dark p-6 rounded-xl border border-border-color dark:border-border-dark"
+                    >
+                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                            <div>
+                                <h3 className="text-xl font-semibold text-text-primary dark:text-text-primary-dark">{model.name}</h3>
+                                <p className="text-md text-text-subtle dark:text-text-secondary-dark mb-4">{model.type}</p>
+                                <p className="text-text-secondary dark:text-text-secondary-dark text-base whitespace-pre-wrap leading-relaxed">{model.description}</p>
+                            </div>
+                            <div className={`text-2xl font-bold ${priceClasses} px-5 py-3 rounded-xl shadow-sm whitespace-nowrap mt-4 md:mt-0`}>
+                                {calculatedPrice}
                             </div>
                         </div>
-                    );
-                })}
-            </div>
-        );
-    };
+                    </div>
+                );
+            })}
+        </div>
+    );
 
     return (
         <>
             <AppHeader 
-                title={selectedCategory || "Catálogo de Produtos"} 
+                title={selectedCategory ? `Modelos de ${selectedCategory}` : "Catálogo de Produtos"} 
                 showBackButton 
-                onBackClick={selectedCategory ? handleBackToCategories : goToHome} 
+                onBackClick={selectedCategory ? () => setSelectedCategory(null) : goToHome} 
             />
             <main className="flex-1 overflow-y-auto p-6 lg:p-10">
-                {selectedCategory ? renderModelsView() : renderCategoryView()}
+                {selectedCategory ? (
+                    <ModelDetailsPage category={selectedCategory} onBack={() => setSelectedCategory(null)} />
+                ) : (
+                    <CategoryListPage />
+                )}
             </main>
         </>
     );
 };
+
 
 // ExchangeRatePage: Fetches and displays JPY/BRL exchange rate, and manages the reference rate
 const ExchangeRatePage: React.FC<{
@@ -672,20 +664,31 @@ const ChatPage: React.FC<{ goToHome: () => void; }> = ({ goToHome }) => {
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    // Reset chat session on mount to ensure a fresh context
+    resetChatSession();
+    // Scroll to bottom after a short delay to handle layout rendering
+    const timer = setTimeout(() => {
+        chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
+    return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    if (messages.length > 1) {
+        chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
   }, [messages]);
 
   const handleSendMessage = async (text: string) => {
     setIsLoading(true);
-    const newMessages: Message[] = [...messages, { sender: MessageSender.USER, text }];
-    setMessages(newMessages);
+    setMessages(prev => [...prev, { sender: MessageSender.USER, text }]);
 
     try {
       const aiResponse = await generateChatResponse(text);
-      setMessages([...newMessages, { sender: MessageSender.AI, text: aiResponse }]);
+      setMessages(prev => [...prev, { sender: MessageSender.AI, text: aiResponse }]);
     } catch (error) {
       console.error(error);
-      setMessages([...newMessages, { sender: MessageSender.ERROR, text: "Desculpe, ocorreu um erro ao me comunicar com a IA. Tente novamente." }]);
+      setMessages(prev => [...prev, { sender: MessageSender.ERROR, text: "Desculpe, ocorreu um erro ao me comunicar com a IA. Tente novamente." }]);
     } finally {
       setIsLoading(false);
     }
@@ -797,6 +800,7 @@ const OrderPage: React.FC<{ goToHome: () => void; user: User; initialOrder: Orde
     TIPO_VENDA: initialOrder?.TIPO_VENDA || '',
     CLIENTE_RAZAO_SOCIAL: initialOrder?.CLIENTE_RAZAO_SOCIAL || '',
     CLIENTE_CNPJ: initialOrder?.CLIENTE_CNPJ || '',
+    CLIENTE_INSCRICAO_ESTADUAL: initialOrder?.CLIENTE_INSCRICAO_ESTADUAL || '',
     CLIENTE_ENDERECO: initialOrder?.CLIENTE_ENDERECO || '',
     CLIENTE_BAIRRO: initialOrder?.CLIENTE_BAIRRO || '',
     CLIENTE_CEP: initialOrder?.CLIENTE_CEP || '',
@@ -812,10 +816,10 @@ const OrderPage: React.FC<{ goToHome: () => void; user: User; initialOrder: Orde
     OBSERVACAO_GERAL: initialOrder?.OBSERVACAO_GERAL || ''
   });
 
-  const isViewMode = !!initialOrder;
+  const isViewMode = !!initialOrder || isSaved;
 
   useEffect(() => {
-    if (!isViewMode) {
+    if (!isViewMode && !isSaved) {
       setFormData(prev => ({ ...prev, PEDIDO_NUMERO: 'Carregando...' }));
       const fetchOrderNumber = async () => {
         try {
@@ -829,7 +833,7 @@ const OrderPage: React.FC<{ goToHome: () => void; user: User; initialOrder: Orde
       };
       fetchOrderNumber();
     }
-  }, [isViewMode]);
+  }, []); // Run once on mount if not view mode
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -859,6 +863,10 @@ const OrderPage: React.FC<{ goToHome: () => void; user: User; initialOrder: Orde
     }
   };
 
+  const handleEditOrder = () => {
+      setIsSaved(false);
+  }
+
   const handleGeneratePdf = async (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
     setIsGeneratingPdf(true);
@@ -875,238 +883,343 @@ const OrderPage: React.FC<{ goToHome: () => void; user: User; initialOrder: Orde
     }
   };
 
-  const inputClass = "h-11 text-sm w-full bg-background-light dark:bg-surface-dark border border-border-color dark:border-border-dark rounded-lg py-2.5 px-3 text-text-primary dark:text-text-primary-dark placeholder-placeholder focus:outline-none focus:ring-2 focus:ring-primary focus:shadow-focus-ring read-only:bg-border-color/40 dark:read-only:bg-surface-dark/50";
-  const labelClass = "block text-xs font-medium text-text-subtle dark:text-text-secondary-dark mb-1";
+  // Estilos refinados para simular "papel" e "documento"
+  const inputClass = "h-9 text-sm w-full bg-transparent border border-gray-300 rounded px-2 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-colors read-only:bg-gray-50 read-only:border-gray-200 print:border-none print:bg-transparent";
+  const labelClass = "block text-xs font-bold text-gray-600 uppercase mb-1 tracking-wide";
   
+  // Função auxiliar para renderizar inputs ou texto plano dependendo do modo
+  const renderField = (label: string, name: keyof typeof formData, type: string = "text", maxLength?: number, className?: string) => {
+    if (isViewMode) {
+      return (
+        <div className={className}>
+           <span className={labelClass}>{label}</span>
+           <div className="text-sm font-medium text-gray-900 min-h-[1.5rem] border-b border-transparent py-1">
+              {formData[name] || '-'}
+           </div>
+        </div>
+      );
+    }
+    return (
+      <div className={className}>
+         <label htmlFor={name} className={labelClass}>{label}</label>
+         <input type={type} name={name} id={name} value={formData[name]} onChange={handleInputChange} className={inputClass} maxLength={maxLength} />
+      </div>
+    );
+  };
+
+  const renderTextarea = (label: string, name: keyof typeof formData, placeholder: string, heightClass: string = "h-24") => {
+     if (isViewMode) {
+        return (
+            <div>
+                 {label && <span className={labelClass}>{label}</span>}
+                 <div className={`w-full text-sm font-medium text-gray-900 whitespace-pre-wrap border-transparent py-2 ${name === 'PRODUTO_DESCRICAO' ? 'min-h-[120px]' : 'min-h-[60px]'}`}>
+                    {formData[name] || '-'}
+                 </div>
+            </div>
+        )
+     }
+     return (
+        <div>
+             {label && <label htmlFor={name} className={labelClass}>{label}</label>}
+             <textarea name={name} id={name} value={formData[name]} onChange={handleInputChange} className={`w-full ${heightClass} bg-gray-50 border border-gray-200 rounded p-2 text-xs focus:outline-none focus:border-primary resize-none`} placeholder={placeholder}></textarea>
+        </div>
+     )
+  }
+
   return (
     <>
       <AppHeader title={isViewMode ? "Detalhes do Pedido" : "Gerar Pedido"} showBackButton onBackClick={goToHome} />
-      <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-10">
-        <div id="order-form-container" className="max-w-4xl mx-auto space-y-6 mb-24 p-6 sm:p-8 bg-surface-light dark:bg-surface-dark shadow-card rounded-2xl border border-border-color dark:border-border-dark">
-            
-            <div className="flex flex-col sm:flex-row justify-between items-start gap-6 border-b border-border-color dark:border-border-dark pb-6 mb-6">
-                <div className="text-left text-xs leading-normal text-text-subtle dark:text-text-secondary-dark space-y-1">
-                    <h2 className="text-lg font-bold text-text-primary dark:text-text-primary-dark mb-2">Barudan do Brasil Com. e Ind. Ltda.</h2>
-                    <p>Av. Gomes Freire, 574 - Centro Rio de Janeiro - RJ - Cep: 20231-015</p>
-                    <p>Tel.: (21) 2506-0050 - Fax: (21) 2506-0070</p>
-                    <p>Website: www.barudan.com.br - E-mail: sac@barudan.com.br</p>
-                    <p>CNPJ: 40.375.636/0001-32 - Inscrição Estadual: 84.369.381</p>
-                </div>
-                
-                <div className="flex-shrink-0 w-full sm:w-auto">
-                    <div className="grid grid-cols-2 gap-x-4 gap-y-4">
-                        <div><label htmlFor="PEDIDO_NUMERO" className={labelClass}>Nº Pedido</label><input type="text" name="PEDIDO_NUMERO" id="PEDIDO_NUMERO" value={formData.PEDIDO_NUMERO} className={inputClass} readOnly /></div>
-                        <div><label htmlFor="PEDIDO_DATA" className={labelClass}>Data</label><input type="date" name="PEDIDO_DATA" id="PEDIDO_DATA" value={formData.PEDIDO_DATA} onChange={handleInputChange} className={inputClass} readOnly={isViewMode} /></div>
-                        <div className="col-span-2"><label htmlFor="VENDEDOR_NOME" className={labelClass}>Vendedor</label><input type="text" name="VENDEDOR_NOME" id="VENDEDOR_NOME" value={formData.VENDEDOR_NOME} onChange={handleInputChange} className={inputClass} readOnly={isViewMode} /></div>
-                        <div className="col-span-2"><label htmlFor="TIPO_VENDA" className={labelClass}>Tipo de Venda</label><input type="text" name="TIPO_VENDA" id="TIPO_VENDA" value={formData.TIPO_VENDA} onChange={handleInputChange} className={inputClass} readOnly={isViewMode} /></div>
-                    </div>
-                </div>
-            </div>
-
-            <section>
-                <h2 className="text-xl font-bold mb-4 text-text-primary dark:text-text-primary-dark">Dados do Cliente</h2>
-                <div className="grid grid-cols-12 gap-x-4 gap-y-4">
-                    <div className="col-span-12">
-                        <label htmlFor="CLIENTE_RAZAO_SOCIAL" className={labelClass}>Razão Social</label>
-                        <input type="text" name="CLIENTE_RAZAO_SOCIAL" id="CLIENTE_RAZAO_SOCIAL" value={formData.CLIENTE_RAZAO_SOCIAL} onChange={handleInputChange} className={inputClass} readOnly={isViewMode} />
-                    </div>
-                    
-                    <div className="col-span-12 md:col-span-5">
-                        <label htmlFor="CLIENTE_CNPJ" className={labelClass}>CNPJ</label>
-                        <input type="text" name="CLIENTE_CNPJ" id="CLIENTE_CNPJ" value={formData.CLIENTE_CNPJ} onChange={handleInputChange} className={inputClass} readOnly={isViewMode} maxLength={18} />
-                    </div>
-
-                    <div className="col-span-12 md:col-span-7">
-                        <label htmlFor="CLIENTE_TELEFONE" className={labelClass}>Telefone</label>
-                        <input type="tel" name="CLIENTE_TELEFONE" id="CLIENTE_TELEFONE" value={formData.CLIENTE_TELEFONE} onChange={handleInputChange} className={inputClass} readOnly={isViewMode} maxLength={20} />
-                    </div>
-
-                    <div className="col-span-12">
-                        <label htmlFor="CLIENTE_EMAIL" className={labelClass}>E-mail</label>
-                        <input type="email" name="CLIENTE_EMAIL" id="CLIENTE_EMAIL" value={formData.CLIENTE_EMAIL} onChange={handleInputChange} className={inputClass} readOnly={isViewMode} />
-                    </div>
-
-                    <div className="col-span-12">
-                        <label htmlFor="CLIENTE_ENDERECO" className={labelClass}>Endereço</label>
-                        <input type="text" name="CLIENTE_ENDERECO" id="CLIENTE_ENDERECO" value={formData.CLIENTE_ENDERECO} onChange={handleInputChange} className={inputClass} readOnly={isViewMode} />
-                    </div>
-
-                    <div className="col-span-12 md:col-span-6">
-                        <label htmlFor="CLIENTE_BAIRRO" className={labelClass}>Bairro</label>
-                        <input type="text" name="CLIENTE_BAIRRO" id="CLIENTE_BAIRRO" value={formData.CLIENTE_BAIRRO} onChange={handleInputChange} className={inputClass} readOnly={isViewMode} />
-                    </div>
-
-                    <div className="col-span-12 md:col-span-6">
-                        <label htmlFor="CLIENTE_CIDADE" className={labelClass}>Cidade</label>
-                        <input type="text" name="CLIENTE_CIDADE" id="CLIENTE_CIDADE" value={formData.CLIENTE_CIDADE} onChange={handleInputChange} className={inputClass} readOnly={isViewMode} />
-                    </div>
-                    
-                    <div className="col-span-12 md:col-span-4">
-                        <label htmlFor="CLIENTE_CEP" className={labelClass}>CEP</label>
-                        <input type="text" name="CLIENTE_CEP" id="CLIENTE_CEP" value={formData.CLIENTE_CEP} onChange={handleInputChange} className={inputClass} readOnly={isViewMode} maxLength={9} />
-                    </div>
-
-                    <div className="col-span-12 md:col-span-2">
-                        <label htmlFor="CLIENTE_UF" className={labelClass}>UF</label>
-                        <input type="text" name="CLIENTE_UF" id="CLIENTE_UF" value={formData.CLIENTE_UF} onChange={handleInputChange} className={inputClass} readOnly={isViewMode} maxLength={2} />
-                    </div>
-
-                    <div className="col-span-12 md:col-span-6">
-                        <label htmlFor="CLIENTE_CONTATO_AC" className={labelClass}>Contato (A/C)</label>
-                        <input type="text" name="CLIENTE_CONTATO_AC" id="CLIENTE_CONTATO_AC" value={formData.CLIENTE_CONTATO_AC} onChange={handleInputChange} className={inputClass} readOnly={isViewMode} />
-                    </div>
-                </div>
-            </section>
-
-            <section>
-                <h2 className="text-xl font-bold mb-4 text-text-primary dark:text-text-primary-dark">Produto / Observações</h2>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-x-4 gap-y-4">
-                     <div className="md:col-span-1"><label htmlFor="PRODUTO_QUANTIDADE" className={labelClass}>Quantidade</label><input type="number" name="PRODUTO_QUANTIDADE" id="PRODUTO_QUANTIDADE" value={formData.PRODUTO_QUANTIDADE} onChange={handleInputChange} className={inputClass} readOnly={isViewMode} /></div>
-                     <div className="md:col-span-3"><label htmlFor="PRODUTO_DESCRICAO" className={labelClass}>Descrição do Produto</label><textarea name="PRODUTO_DESCRICAO" id="PRODUTO_DESCRICAO" value={formData.PRODUTO_DESCRICAO} onChange={handleInputChange} className={`${inputClass} h-24`} readOnly={isViewMode}></textarea></div>
-                     <div className="md:col-span-4"><label htmlFor="OBSERVACAO_GERAL" className={labelClass}>Observação Geral</label><textarea name="OBSERVACAO_GERAL" id="OBSERVACAO_GERAL" value={formData.OBSERVACAO_GERAL} onChange={handleInputChange} className={`${inputClass} h-24`} readOnly={isViewMode}></textarea></div>
-                </div>
-            </section>
-            
-            <section>
-                <h2 className="text-xl font-bold mb-4 text-text-primary dark:text-text-primary-dark">Condições Comerciais</h2>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-x-4 gap-y-4">
-                    <div><label htmlFor="PEDIDO_VALOR_TOTAL" className={labelClass}>Valor Total (R$)</label><input type="text" name="PEDIDO_VALOR_TOTAL" id="PEDIDO_VALOR_TOTAL" value={formData.PEDIDO_VALOR_TOTAL} onChange={handleInputChange} className={inputClass} readOnly={isViewMode} /></div>
-                </div>
-            </section>
-
-            <section>
-                <h2 className="text-xl font-bold mb-4 text-text-primary dark:text-text-primary-dark">Transporte</h2>
-                <div className="grid grid-cols-1">
-                    <div><label htmlFor="TRANSPORTADORA" className={labelClass}>Transportadora</label><input type="text" name="TRANSPORTADORA" id="TRANSPORTADORA" value={formData.TRANSPORTADORA} onChange={handleInputChange} className={inputClass} readOnly={isViewMode} /></div>
-                </div>
-            </section>
-
-
-            <div className="pt-6 flex flex-col sm:flex-row justify-end gap-3">
-                {!isViewMode && (
-                    <button
-                        type="button"
-                        onClick={handleSaveOrder}
-                        disabled={isSaving || isSaved}
-                        className="w-full sm:w-auto h-11 flex justify-center items-center px-8 border border-primary text-primary dark:text-primary-light dark:border-primary-light/50 rounded-lg text-sm font-medium hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-surface-light dark:focus:ring-offset-surface-dark focus:ring-primary disabled:bg-gray-200 dark:disabled:bg-gray-700 disabled:text-gray-500 disabled:border-gray-300 dark:disabled:border-gray-600 disabled:cursor-not-allowed"
-                    >
-                        {isSaving ? 'Salvando...' : (isSaved ? 'Salvo com Sucesso!' : 'Salvar Pedido')}
-                    </button>
-                )}
+      <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-10 bg-gray-100 dark:bg-background-dark">
+        
+        {/* Botões de Ação fora do container do PDF */}
+        <div className="max-w-5xl mx-auto mb-4 flex flex-col sm:flex-row justify-end gap-3">
+             {isViewMode ? (
+                 <button
+                    type="button"
+                    onClick={handleEditOrder}
+                    disabled={isGeneratingPdf}
+                    className="w-full sm:w-auto h-10 flex justify-center items-center px-6 bg-white dark:bg-surface-dark border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 focus:outline-none shadow-sm transition-all"
+                >
+                    Editar
+                </button>
+             ) : (
                 <button
                     type="button"
-                    onClick={handleGeneratePdf}
-                    disabled={isGeneratingPdf || (!isViewMode && !isSaved)}
-                    className="w-full sm:w-auto h-11 flex justify-center items-center px-8 border border-transparent rounded-lg text-sm font-medium text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-surface-light dark:focus:ring-offset-surface-dark focus:ring-primary disabled:bg-gray-400 dark:disabled:bg-gray-600"
+                    onClick={handleSaveOrder}
+                    disabled={isSaving}
+                    className="w-full sm:w-auto h-10 flex justify-center items-center px-6 bg-white dark:bg-surface-dark border border-primary text-primary rounded-lg text-sm font-medium hover:bg-primary/5 focus:outline-none shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                    {isGeneratingPdf ? 'Gerando PDF...' : (isViewMode ? 'Baixar PDF' : 'Gerar PDF')}
+                    {isSaving ? 'Salvando...' : 'Salvar Pedido'}
                 </button>
+            )}
+            <button
+                type="button"
+                onClick={handleGeneratePdf}
+                disabled={isGeneratingPdf || !isViewMode}
+                className="w-full sm:w-auto h-10 flex justify-center items-center px-6 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-dark shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+                {isGeneratingPdf ? 'Gerando PDF...' : 'Baixar PDF'}
+            </button>
+        </div>
+
+        {/* Container do Formulário (Folha de Papel) */}
+        <div id="order-form-container" className="max-w-5xl mx-auto bg-white shadow-lg rounded-sm p-8 md:p-12 border border-gray-200 text-gray-900 relative">
+            
+            {/* Cabeçalho do Documento */}
+            <div className="flex flex-col md:flex-row justify-between items-start border-b-4 border-primary pb-6 mb-6 gap-6">
+                <div className="space-y-1">
+                    <h1 className="text-3xl font-extrabold text-primary tracking-tight">Barudan do Brasil</h1>
+                    <p className="text-sm text-gray-500 font-medium">Comércio e Indústria Ltda.</p>
+                    <div className="text-xs text-gray-400 leading-relaxed mt-2 max-w-sm">
+                        <p>Av. Gomes Freire, 574 - Centro, Rio de Janeiro - RJ</p>
+                        <p>CEP: 20231-015 | Tel.: (21) 2506-0050</p>
+                        <p>CNPJ: 40.375.636/0001-32 | I.E.: 84.369.381</p>
+                        <p>www.barudan.com.br | sac@barudan.com.br</p>
+                    </div>
+                </div>
+                
+                <div className="text-right">
+                    <h2 className="text-4xl font-black text-gray-200 uppercase tracking-widest">PEDIDO</h2>
+                    <div className="mt-2 inline-block bg-gray-100 px-4 py-2 rounded border border-gray-200">
+                         <span className="text-xs font-bold text-gray-500 uppercase block">NÚMERO</span>
+                         <span className="text-2xl font-mono font-bold text-gray-900">#{formData.PEDIDO_NUMERO}</span>
+                    </div>
+                </div>
             </div>
+
+            {/* Barra de Informações Gerais */}
+            <div className="bg-gray-50 border-y border-gray-200 p-4 mb-8 grid grid-cols-1 md:grid-cols-4 gap-6">
+                <div>
+                     {isViewMode ? (
+                        <div>
+                             <span className={labelClass}>Data de Emissão</span>
+                             <p className="font-medium text-gray-900">{formData.PEDIDO_DATA ? new Date(formData.PEDIDO_DATA).toLocaleDateString('pt-BR', {timeZone: 'UTC'}) : '-'}</p>
+                        </div>
+                     ) : (
+                        <>
+                            <label htmlFor="PEDIDO_DATA" className={labelClass}>Data de Emissão</label>
+                            <input type="date" name="PEDIDO_DATA" id="PEDIDO_DATA" value={formData.PEDIDO_DATA} onChange={handleInputChange} className="bg-transparent font-medium text-gray-900 focus:outline-none w-full" />
+                        </>
+                     )}
+                </div>
+                <div className="md:col-span-2">
+                    {isViewMode ? (
+                        <div>
+                            <span className={labelClass}>Vendedor Responsável</span>
+                            <p className="font-medium text-gray-900">{formData.VENDEDOR_NOME || '-'}</p>
+                        </div>
+                    ) : (
+                        <>
+                            <label htmlFor="VENDEDOR_NOME" className={labelClass}>Vendedor Responsável</label>
+                            <input type="text" name="VENDEDOR_NOME" id="VENDEDOR_NOME" value={formData.VENDEDOR_NOME} onChange={handleInputChange} className="bg-transparent border-b border-gray-300 focus:border-primary w-full py-1 text-sm focus:outline-none placeholder-gray-300" placeholder="Nome do vendedor" />
+                        </>
+                    )}
+                </div>
+                <div>
+                     {isViewMode ? (
+                        <div>
+                            <span className={labelClass}>Tipo de Venda</span>
+                            <p className="font-medium text-gray-900">{formData.TIPO_VENDA || '-'}</p>
+                        </div>
+                    ) : (
+                        <>
+                            <label htmlFor="TIPO_VENDA" className={labelClass}>Tipo de Venda</label>
+                            <input type="text" name="TIPO_VENDA" id="TIPO_VENDA" value={formData.TIPO_VENDA} onChange={handleInputChange} className="bg-transparent border-b border-gray-300 focus:border-primary w-full py-1 text-sm focus:outline-none placeholder-gray-300" placeholder="Ex: Venda Direta" />
+                        </>
+                    )}
+                </div>
+            </div>
+
+            {/* Seção Cliente */}
+            <section className="mb-8">
+                <div className="flex items-center mb-4">
+                    <div className="h-px bg-gray-300 flex-1"></div>
+                    <h3 className="px-4 text-primary font-bold uppercase tracking-wider text-sm">Dados do Cliente</h3>
+                    <div className="h-px bg-gray-300 flex-1"></div>
+                </div>
+
+                <div className={`grid grid-cols-12 gap-4 p-4 border border-gray-100 rounded ${isViewMode ? 'bg-transparent border-none p-0' : 'bg-white'}`}>
+                    {renderField("Razão Social / Nome", "CLIENTE_RAZAO_SOCIAL", "text", undefined, "col-span-12 md:col-span-8")}
+                    {renderField("A/C (Contato)", "CLIENTE_CONTATO_AC", "text", undefined, "col-span-12 md:col-span-4")}
+                    {renderField("CNPJ / CPF", "CLIENTE_CNPJ", "text", 18, "col-span-12 md:col-span-4")}
+                    {renderField("Inscrição Estadual", "CLIENTE_INSCRICAO_ESTADUAL", "text", undefined, "col-span-12 md:col-span-4")}
+                    {renderField("Telefone / Celular", "CLIENTE_TELEFONE", "tel", 20, "col-span-12 md:col-span-4")}
+                    {renderField("E-mail de Contato", "CLIENTE_EMAIL", "email", undefined, "col-span-12 md:col-span-6")}
+                    {renderField("Transportadora Preferencial", "TRANSPORTADORA", "text", undefined, "col-span-12 md:col-span-6")}
+                    {renderField("Endereço Completo", "CLIENTE_ENDERECO", "text", undefined, "col-span-12")}
+                    {renderField("Bairro", "CLIENTE_BAIRRO", "text", undefined, "col-span-12 md:col-span-5")}
+                    {renderField("Cidade", "CLIENTE_CIDADE", "text", undefined, "col-span-12 md:col-span-4")}
+                    {renderField("Estado", "CLIENTE_UF", "text", 2, "col-span-12 md:col-span-2")}
+                    {renderField("CEP", "CLIENTE_CEP", "text", 9, "col-span-12 md:col-span-1")}
+                </div>
+            </section>
+
+            {/* Seção Produtos e Valores */}
+            <section className="mb-8">
+                <div className="flex items-center mb-4">
+                    <div className="h-px bg-gray-300 flex-1"></div>
+                    <h3 className="px-4 text-primary font-bold uppercase tracking-wider text-sm">Detalhamento do Pedido</h3>
+                    <div className="h-px bg-gray-300 flex-1"></div>
+                </div>
+
+                <div className="border border-gray-200 rounded-lg overflow-hidden">
+                    <div className="bg-gray-50 border-b border-gray-200 p-3 flex gap-4">
+                        <div className="w-24 text-xs font-bold text-gray-600 uppercase">QTD</div>
+                        <div className="flex-1 text-xs font-bold text-gray-600 uppercase">Descrição do Produto / Serviço</div>
+                    </div>
+                    <div className="p-4 flex gap-4 bg-white items-start">
+                         <div className="w-24 text-center">
+                             {isViewMode ? (
+                                <span className="font-bold text-gray-900">{formData.PRODUTO_QUANTIDADE}</span>
+                             ) : (
+                                <input type="number" name="PRODUTO_QUANTIDADE" id="PRODUTO_QUANTIDADE" value={formData.PRODUTO_QUANTIDADE} onChange={handleInputChange} className={`${inputClass} text-center font-bold`} />
+                             )}
+                         </div>
+                         <div className="flex-1">
+                             {renderTextarea("", "PRODUTO_DESCRICAO", "Descreva detalhadamente os itens...", "min-h-[120px]")}
+                         </div>
+                    </div>
+                </div>
+                
+                <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                         {renderTextarea("Observações Gerais", "OBSERVACAO_GERAL", "Instruções de entrega, voltagem, etc.", "h-24")}
+                    </div>
+                    <div className="flex flex-col justify-end items-end">
+                        <div className="bg-primary/5 p-6 rounded-lg border border-primary/20 w-full md:w-auto min-w-[250px]">
+                             <label htmlFor="PEDIDO_VALOR_TOTAL" className="block text-right text-xs font-bold text-primary uppercase mb-2">Valor Total do Pedido</label>
+                             {isViewMode ? (
+                                <p className="text-3xl font-black text-right text-primary">{formData.PEDIDO_VALOR_TOTAL || 'R$ 0,00'}</p>
+                             ) : (
+                                <input type="text" name="PEDIDO_VALOR_TOTAL" id="PEDIDO_VALOR_TOTAL" value={formData.PEDIDO_VALOR_TOTAL} onChange={handleInputChange} className="text-3xl font-black text-right bg-transparent border-none text-primary w-full focus:ring-0 p-0" placeholder="R$ 0,00" />
+                             )}
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            {/* Rodapé com Assinaturas */}
+            <section className="mt-16 pt-8 border-t border-gray-200">
+                <div className="grid grid-cols-2 gap-12">
+                    <div className="text-center">
+                        <div className="border-b border-gray-400 mb-2 h-8"></div>
+                        <p className="text-xs font-bold uppercase text-gray-600">Barudan do Brasil</p>
+                        <p className="text-xs text-gray-400">{formData.VENDEDOR_NOME}</p>
+                    </div>
+                    <div className="text-center">
+                        <div className="border-b border-gray-400 mb-2 h-8"></div>
+                        <p className="text-xs font-bold uppercase text-gray-600">Cliente / Responsável</p>
+                        <p className="text-xs text-gray-400">{formData.CLIENTE_RAZAO_SOCIAL}</p>
+                    </div>
+                </div>
+                <div className="mt-8 text-center">
+                    <p className="text-[10px] text-gray-400 italic">Este documento não possui valor fiscal até a emissão da nota fiscal correspondente.</p>
+                </div>
+            </section>
+
         </div>
       </main>
     </>
   );
 };
 
-
+// MyOrdersPage: Displays a list of saved orders for the user
 const MyOrdersPage: React.FC<{ goToHome: () => void; user: User; onSelectOrder: (order: Order) => void; }> = ({ goToHome, user, onSelectOrder }) => {
-    const [orders, setOrders] = useState<Order[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-    useEffect(() => {
-        setIsLoading(true);
-        const unsubscribe = getOrdersListener(user.uid, (fetchedOrders) => {
-            setOrders(fetchedOrders);
-            setIsLoading(false);
-        });
-        return () => unsubscribe();
-    }, [user.uid]);
+  useEffect(() => {
+    if (!user) return;
+    const unsubscribe = getOrdersListener(user.uid, (fetchedOrders) => {
+        setOrders(fetchedOrders);
+        setIsLoading(false);
+    });
+    return () => unsubscribe();
+  }, [user]);
 
-    const handleDeleteOrder = async (orderId: string) => {
-        if (window.confirm('Tem certeza que deseja excluir este pedido? A ação não pode ser desfeita.')) {
-            try {
-                await deleteOrder(orderId);
-            } catch (error) {
-                console.error("Failed to delete order:", error);
-                alert("Falha ao excluir o pedido.");
-            }
+  const handleDelete = async (orderId: string, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent triggering onSelectOrder
+    if (window.confirm("Tem certeza que deseja excluir este pedido?")) {
+        try {
+            await deleteOrder(orderId);
+        } catch (error) {
+            console.error(error);
+            alert("Erro ao excluir pedido.");
         }
-    };
+    }
+  };
 
-    const handleDeleteAllOrders = async () => {
-        if (window.confirm('TEM CERTEZA?\n\nIsso excluirá TODOS os seus pedidos e reiniciará a contagem de numeração para 1387. Esta ação é irreversível.')) {
-            try {
-                await deleteAllOrdersAndResetCounter(user.uid);
-                alert('Todos os pedidos foram excluídos e o contador foi reiniciado com sucesso.');
-            } catch (error) {
-                console.error("Failed to delete all orders:", error);
-                alert("Falha ao excluir todos os pedidos.");
-            }
-        }
-    };
+  const handleDeleteAll = async () => {
+      if (window.confirm("ATENÇÃO: Isso apagará TODOS os seus pedidos e resetará a contagem. Deseja continuar?")) {
+          try {
+              await deleteAllOrdersAndResetCounter(user.uid);
+          } catch (error) {
+              console.error(error);
+              alert("Erro ao resetar pedidos.");
+          }
+      }
+  }
 
-    return (
-        <>
-            <AppHeader title="Meus Pedidos" showBackButton onBackClick={goToHome} />
-            <main className="flex-1 overflow-y-auto p-6 lg:p-10">
-                <div className="max-w-4xl mx-auto space-y-4">
-                     {!isLoading && orders.length > 0 && (
-                        <div className="flex justify-end mb-4">
-                            <button
-                                onClick={handleDeleteAllOrders}
-                                className="flex items-center gap-2 text-sm text-error bg-transparent border border-error hover:bg-error/10 font-semibold px-4 py-2 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-background-light dark:focus:ring-offset-background-dark focus:ring-error"
-                                aria-label="Excluir todos os pedidos e reiniciar contagem"
-                            >
-                                <TrashIcon className="w-4 h-4" />
-                                <span>Limpar Tudo e Reiniciar</span>
-                            </button>
-                        </div>
-                    )}
-                    {isLoading && <p className="text-center text-text-subtle dark:text-text-secondary-dark animate-pulse py-16">Carregando pedidos...</p>}
-                    {!isLoading && orders.length === 0 && (
-                        <div className="text-center py-20 bg-surface-container dark:bg-surface-container-dark rounded-2xl border border-border-color dark:border-border-dark">
-                            <p className="text-lg text-text-secondary dark:text-text-secondary-dark">Você ainda não tem pedidos salvos.</p>
-                            <p className="text-sm text-text-subtle dark:text-text-secondary-dark mt-2">Crie um novo pedido na tela inicial.</p>
-                        </div>
-                    )}
-                    {orders.map(order => (
-                        <div
-                            key={order.id}
-                            className="w-full flex items-center justify-between text-left p-4 bg-surface-light dark:bg-surface-dark shadow-card rounded-xl border border-border-color dark:border-border-dark hover:shadow-card-hover hover:bg-surface-hover-light dark:hover:bg-surface-dark/80"
+  return (
+      <>
+        <AppHeader title="Histórico de Pedidos" showBackButton onBackClick={goToHome} />
+        <main className="flex-1 overflow-y-auto p-6 lg:p-10">
+            <div className="max-w-5xl mx-auto space-y-6">
+                <div className="flex justify-between items-center">
+                    <h2 className="text-xl font-bold text-text-primary dark:text-text-primary-dark">Seus Pedidos Salvos</h2>
+                    {orders.length > 0 && (
+                         <button
+                            onClick={handleDeleteAll}
+                            className="flex items-center gap-2 text-error hover:text-red-700 px-3 py-1 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-sm font-medium"
                         >
-                            <div
-                                onClick={() => onSelectOrder(order)}
-                                className="flex-1 flex items-center justify-between text-left cursor-pointer -m-4 p-4 rounded-l-xl"
-                                role="button"
-                                tabIndex={0}
-                                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onSelectOrder(order); }}
-                                aria-label={`Ver detalhes do pedido ${order.PEDIDO_NUMERO || 'N/A'}`}
-                            >
-                                <div>
-                                    <p className="font-semibold text-text-primary dark:text-text-primary-dark">Pedido Nº: {order.PEDIDO_NUMERO || 'N/A'}</p>
-                                    <p className="text-sm text-text-secondary dark:text-text-secondary-dark mt-1">Cliente: {order.CLIENTE_RAZAO_SOCIAL}</p>
-                                </div>
-                                <div className="text-right">
-                                    <p className="text-sm text-text-subtle dark:text-text-secondary-dark">
-                                        {order.createdAt ? new Date(order.createdAt.seconds * 1000).toLocaleDateString('pt-BR') : ''}
-                                    </p>
-                                    <span className="text-primary text-sm font-semibold mt-1 block">Ver Detalhes</span>
-                                </div>
-                            </div>
-                             <button
-                                onClick={() => handleDeleteOrder(order.id)}
-                                className="ml-4 flex-shrink-0 p-2 rounded-full text-text-subtle hover:bg-error/10 dark:hover:bg-error/20 hover:text-error dark:hover:text-error focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-surface-light dark:focus:ring-offset-surface-dark focus:ring-error"
-                                aria-label={`Excluir pedido ${order.PEDIDO_NUMERO || 'N/A'}`}
-                            >
-                                <TrashIcon className="w-5 h-5" />
-                            </button>
-                        </div>
-                    ))}
+                            <TrashIcon className="w-4 h-4" />
+                            Resetar Tudo
+                        </button>
+                    )}
                 </div>
-            </main>
-        </>
-    );
-};
 
+                {isLoading ? (
+                    <p className="text-center text-text-secondary dark:text-text-secondary-dark">Carregando...</p>
+                ) : orders.length === 0 ? (
+                    <div className="text-center py-12 bg-surface-light dark:bg-surface-dark rounded-xl border border-border-color dark:border-border-dark">
+                        <CartIcon className="w-12 h-12 mx-auto text-text-subtle dark:text-text-secondary-dark mb-3 opacity-50" />
+                        <p className="text-text-secondary dark:text-text-secondary-dark">Nenhum pedido encontrado.</p>
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {orders.map(order => (
+                            <div
+                                key={order.id}
+                                onClick={() => onSelectOrder(order)}
+                                className="bg-surface-light dark:bg-surface-dark p-5 rounded-xl border border-border-color dark:border-border-dark shadow-sm hover:shadow-md cursor-pointer transition-all group relative"
+                            >
+                                <div className="flex justify-between items-start">
+                                    <div>
+                                        <span className="inline-block bg-primary/10 text-primary text-xs font-bold px-2 py-1 rounded mb-2">#{order.PEDIDO_NUMERO}</span>
+                                        <h3 className="font-bold text-text-primary dark:text-text-primary-dark truncate">{order.CLIENTE_RAZAO_SOCIAL || "Cliente sem nome"}</h3>
+                                        <p className="text-sm text-text-secondary dark:text-text-secondary-dark mt-1">
+                                            {order.PEDIDO_DATA ? new Date(order.PEDIDO_DATA).toLocaleDateString('pt-BR', {timeZone: 'UTC'}) : 'Sem data'}
+                                        </p>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="font-bold text-primary">{order.PEDIDO_VALOR_TOTAL || "R$ 0,00"}</p>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={(e) => handleDelete(order.id, e)}
+                                    className="absolute top-4 right-4 p-2 text-gray-400 hover:text-error rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 opacity-0 group-hover:opacity-100 transition-opacity"
+                                    title="Excluir"
+                                >
+                                    <TrashIcon className="w-5 h-5" />
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+        </main>
+      </>
+  );
+};
 
 export default App;

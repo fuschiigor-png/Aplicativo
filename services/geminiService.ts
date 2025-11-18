@@ -1,22 +1,35 @@
-import { GoogleGenAI, Type, Chat } from "@google/genai";
+
+import { GoogleGenAI, Chat } from "@google/genai";
 
 let ai: GoogleGenAI;
 let chat: Chat | null = null;
 
 const getAI = () => {
   if (!ai) {
-    if (!process.env.API_KEY) {
+    // Robust safety check for API KEY
+    let apiKey = "";
+    try {
+        // @ts-ignore
+        if (typeof process !== 'undefined' && process.env && process.env.API_KEY) {
+            // @ts-ignore
+            apiKey = process.env.API_KEY;
+        }
+    } catch (e) {
+        console.warn("Error accessing process.env:", e);
+    }
+    
+    if (!apiKey) {
       console.warn("API_KEY environment variable not set. The application might not work as expected.");
     }
-    ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    ai = new GoogleGenAI({ apiKey });
   }
   return ai;
 };
 
 const getChatSession = (): Chat => {
     if (!chat) {
-        const ai = getAI();
-        chat = ai.chats.create({
+        const aiInstance = getAI();
+        chat = aiInstance.chats.create({
             model: "gemini-2.5-flash",
             config: {
                 systemInstruction: `**INSTRUÇÃO SISTÊMICA (Barudex)**
@@ -40,21 +53,25 @@ Você é a **Barudex**, uma Inteligência Artificial amigável e profissional, e
     return chat;
 }
 
+export const resetChatSession = () => {
+    chat = null;
+};
+
 export const generateChatResponse = async (prompt: string): Promise<string> => {
     try {
         const chatSession = getChatSession();
         const response = await chatSession.sendMessage({ message: prompt });
-        return response.text;
+        return response.text || "Desculpe, não consegui gerar uma resposta no momento.";
     } catch(error) {
         console.error("Error generating chat response from Gemini:", error);
-        throw new Error("Falha ao gerar resposta do chat.");
+        return "Desculpe, ocorreu um erro de conexão com a IA. Tente novamente em instantes.";
     }
 };
 
 export const getExchangeRate = async (): Promise<number> => {
     try {
-        const ai = getAI();
-        const response = await ai.models.generateContent({
+        const aiInstance = getAI();
+        const response = await aiInstance.models.generateContent({
             model: "gemini-2.5-flash",
             contents: "Qual a cotação atual de 1 Iene Japonês (JPY) para Real Brasileiro (BRL)? Responda apenas com o valor numérico com 4 casas decimais, por exemplo: 0.0354",
             config: {
@@ -63,6 +80,11 @@ export const getExchangeRate = async (): Promise<number> => {
         });
 
         const text = response.text;
+        
+        if (!text) {
+             throw new Error("O modelo retornou uma resposta vazia.");
+        }
+
         // Regex to find a number like 0.1234 or 0,1234
         const match = text.match(/(\d+[,.]\d+)/);
         if (match && match[0]) {

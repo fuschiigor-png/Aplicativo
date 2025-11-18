@@ -12,9 +12,9 @@
     "react-dom": "^19.2.0",
     "@google/genai": "^1.29.1",
     "react": "^19.2.0",
-    "firebase": "^12.6.0",
-    "jspdf": "^2.5.1",
-    "html2canvas": "^1.4.1"
+    "jspdf": "2.5.1",
+    "html2canvas": "1.4.1",
+    "firebase": "^12.6.0"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
