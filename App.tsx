@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef, FormEvent } from 'react';
 import { User } from 'firebase/auth';
 import LoginPage from './components/LoginPage';
@@ -160,7 +161,7 @@ const AppHeader: React.FC<{
             aria-label="Voltar para Home"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
-            <span className="hidden sm:inline">Home</span>
+            <span className="hidden sm:inline">Voltar</span>
           </button>
         )}
       </div>
@@ -400,110 +401,115 @@ const machineData: Record<string, { name: string; type: string; price: string; d
 
 const productTypes = Object.keys(machineData);
 
-// MachineModelsPage: Displays specific models and prices with interactive selectors
+// MachineModelsPage: Displays product categories and then specific models
 const MachineModelsPage: React.FC<{ goToHome: () => void; referenceRate: number | null; }> = ({ goToHome, referenceRate }) => {
-    const [selectedProduct, setSelectedProduct] = useState<string>('');
-    const [selectedModelName, setSelectedModelName] = useState<string>('');
-    const [isAnimatingDetails, setIsAnimatingDetails] = useState(false);
-    
+    const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+    const [isAnimating, setIsAnimating] = useState(false);
+
     useEffect(() => {
-        if (selectedModelName) {
-            setIsAnimatingDetails(false);
-            const timer = setTimeout(() => setIsAnimatingDetails(true), 50);
-            return () => clearTimeout(timer);
-        }
-    }, [selectedModelName]);
+        setIsAnimating(false);
+        const timer = setTimeout(() => setIsAnimating(true), 50); // Re-trigger animation on view change
+        return () => clearTimeout(timer);
+    }, [selectedCategory]);
 
-    const handleProductChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        setSelectedProduct(e.target.value);
-        setSelectedModelName('');
+    const handleSelectCategory = (category: string) => {
+        setSelectedCategory(category);
     };
 
-    const handleModelChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        setSelectedModelName(e.target.value);
+    const handleBackToCategories = () => {
+        setSelectedCategory(null);
     };
 
-    const modelsForSelectedProduct = selectedProduct ? machineData[selectedProduct] : [];
-    const selectedModelDetails = selectedModelName ? modelsForSelectedProduct.find(m => m.name === selectedModelName) : null;
-
-    let calculatedPrice = selectedModelDetails?.price;
-    let priceClasses = 'bg-border-color text-text-secondary dark:bg-border-dark dark:text-text-secondary-dark';
-
-    if (selectedModelDetails?.jpyPrice && referenceRate !== null) {
-        const brlPrice = selectedModelDetails.jpyPrice * referenceRate;
-        calculatedPrice = `R$ ${brlPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-        priceClasses = 'bg-primary text-white';
-    } else if (selectedModelDetails?.jpyPrice && referenceRate === null) {
-        calculatedPrice = 'Defina a taxa';
-        priceClasses = 'bg-warning text-white';
-    }
-
-    const inputClass = "h-11 w-full bg-background-light dark:bg-surface-dark border border-border-color dark:border-border-dark rounded-lg py-2.5 px-3.5 text-text-primary dark:text-text-primary-dark placeholder-placeholder focus:outline-none focus:ring-2 focus:ring-primary focus:shadow-focus-ring";
-
-    return (
-        <>
-            <AppHeader title="Modelos e Preços" showBackButton onBackClick={goToHome} />
-            <main className="flex-1 overflow-y-auto p-6 lg:p-10">
-                <div className="max-w-4xl mx-auto space-y-8">
-                    {/* Selectors */}
-                    <div className="bg-surface-light dark:bg-surface-dark p-6 rounded-2xl shadow-card border border-border-color dark:border-border-dark">
-                        <div className="text-center mb-6 pb-6 border-b border-border-color dark:border-border-dark">
-                             <p className="text-sm font-medium text-text-subtle dark:text-text-secondary-dark mb-1">Taxa de Precificação (JPY/BRL)</p>
-                            {referenceRate !== null ? (
-                                <p className="text-3xl font-bold text-text-primary dark:text-text-primary-dark">{referenceRate.toFixed(4)}</p>
-                            ) : (
-                                <p className="text-base text-warning dark:text-warning font-semibold mt-1">Defina a taxa na página de Ajuste.</p>
-                            )}
+    // View for showing product categories
+    const renderCategoryView = () => (
+        <div className={`max-w-5xl mx-auto transition-opacity duration-500 ease-out ${isAnimating ? 'opacity-100' : 'opacity-0'}`}>
+             <div className="text-center mb-10">
+                <h2 className="text-3xl font-bold text-text-primary dark:text-text-primary-dark">Nossos Produtos</h2>
+                <p className="mt-2 text-lg text-text-secondary dark:text-text-secondary-dark">Selecione uma categoria para ver os modelos disponíveis.</p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {productTypes.map((category, index) => (
+                    <button
+                        key={category}
+                        onClick={() => handleSelectCategory(category)}
+                        className="w-full p-6 rounded-2xl bg-surface-light dark:bg-surface-dark shadow-card hover:shadow-card-hover hover:bg-surface-hover-light dark:hover:bg-surface-dark/80 transform hover:-translate-y-1 text-left flex flex-col justify-between focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background-light dark:focus:ring-offset-background-dark border border-border-color dark:border-border-dark"
+                        style={{ transitionDelay: `${index * 50}ms` }}
+                        aria-label={`Ver modelos de ${category}`}
+                    >
+                        <div>
+                            <h3 className="text-xl font-semibold text-text-primary dark:text-text-primary-dark">{category}</h3>
+                            <p className="text-sm text-text-secondary dark:text-text-secondary-dark mt-2">{machineData[category].length} {machineData[category].length > 1 ? 'modelos disponíveis' : 'modelo disponível'}</p>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
-                            <div>
-                                <label htmlFor="product-select" className="block text-xs font-medium text-text-subtle dark:text-text-secondary-dark mb-1">Produto:</label>
-                                <select
-                                    id="product-select"
-                                    value={selectedProduct}
-                                    onChange={handleProductChange}
-                                    className={inputClass}
-                                >
-                                    <option value="">Selecione um Produto</option>
-                                    {productTypes.map(type => (
-                                        <option key={type} value={type}>{type}</option>
-                                    ))}
-                                </select>
-                            </div>
-                            <div>
-                                <label htmlFor="model-select" className="block text-xs font-medium text-text-subtle dark:text-text-secondary-dark mb-1">Modelo:</label>
-                                <select
-                                    id="model-select"
-                                    value={selectedModelName}
-                                    onChange={handleModelChange}
-                                    disabled={!selectedProduct}
-                                    className={`${inputClass} disabled:bg-border-color/50 dark:disabled:bg-surface-dark/50 disabled:cursor-not-allowed`}
-                                >
-                                    <option value="">Selecione um Modelo</option>
-                                    {modelsForSelectedProduct.map(model => (
-                                        <option key={model.name} value={model.name}>{model.name}</option>
-                                    ))}
-                                </select>
-                            </div>
+                        <div className="mt-4 text-primary dark:text-primary-light font-medium flex items-center gap-2">
+                           <span>Ver Modelos</span>
+                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
                         </div>
-                    </div>
+                    </button>
+                ))}
+            </div>
+        </div>
+    );
 
-                    {/* Model Details */}
-                    {selectedModelDetails && (
-                        <div className={`bg-surface-light dark:bg-surface-dark p-8 rounded-2xl shadow-card transition-all duration-500 ease-out border border-border-color dark:border-border-dark ${isAnimatingDetails ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-5'}`}>
+    // View for showing models within a category
+    const renderModelsView = () => {
+        if (!selectedCategory) return null;
+        const models = machineData[selectedCategory];
+
+        return (
+            <div className={`max-w-4xl mx-auto space-y-6 transition-opacity duration-500 ease-out ${isAnimating ? 'opacity-100' : 'opacity-0'}`}>
+                 <div className="text-center mb-4 pb-4 border-b border-border-color dark:border-border-dark">
+                    <p className="text-sm font-medium text-text-subtle dark:text-text-secondary-dark mb-1">Taxa de Precificação (JPY/BRL)</p>
+                    {referenceRate !== null ? (
+                        <p className="text-3xl font-bold text-text-primary dark:text-text-primary-dark">{referenceRate.toFixed(4)}</p>
+                    ) : (
+                        <p className="text-base text-warning dark:text-warning font-semibold mt-1">Defina a taxa na página de Ajuste.</p>
+                    )}
+                </div>
+                {models.map((model, index) => {
+                    let calculatedPrice = model.price;
+                    let priceClasses = 'bg-border-color text-text-secondary dark:bg-border-dark dark:text-text-secondary-dark';
+
+                    if (model.jpyPrice && referenceRate !== null) {
+                        const brlPrice = model.jpyPrice * referenceRate;
+                        calculatedPrice = `R$ ${brlPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                        priceClasses = 'bg-primary text-white';
+                    } else if (model.jpyPrice && referenceRate === null) {
+                        calculatedPrice = 'Defina a taxa';
+                        priceClasses = 'bg-warning text-white';
+                    }
+
+                    return (
+                        <div 
+                            key={model.name} 
+                            className="bg-surface-light dark:bg-surface-dark p-6 rounded-2xl shadow-card border border-border-color dark:border-border-dark"
+                            style={{ transitionDelay: `${index * 50}ms` }}
+                        >
                             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                                 <div>
-                                    <h3 className="text-xl font-semibold text-text-primary dark:text-text-primary-dark">{selectedModelDetails.name}</h3>
-                                    <p className="text-md text-text-subtle dark:text-text-secondary-dark mb-4">{selectedModelDetails.type}</p>
-                                    <p className="text-text-secondary dark:text-text-secondary-dark text-base whitespace-pre-wrap leading-relaxed">{selectedModelDetails.description}</p>
+                                    <h3 className="text-xl font-semibold text-text-primary dark:text-text-primary-dark">{model.name}</h3>
+                                    <p className="text-md text-text-subtle dark:text-text-secondary-dark mb-4">{model.type}</p>
+                                    <p className="text-text-secondary dark:text-text-secondary-dark text-base whitespace-pre-wrap leading-relaxed">{model.description}</p>
                                 </div>
-                                <div className={`text-3xl font-bold ${priceClasses} px-6 py-4 rounded-xl shadow-sm whitespace-nowrap mt-4 md:mt-0`}>
+                                <div className={`text-2xl font-bold ${priceClasses} px-5 py-3 rounded-xl shadow-sm whitespace-nowrap mt-4 md:mt-0`}>
                                     {calculatedPrice}
                                 </div>
                             </div>
                         </div>
-                    )}
-                </div>
+                    );
+                })}
+            </div>
+        );
+    };
+
+    return (
+        <>
+            <AppHeader 
+                title={selectedCategory || "Catálogo de Produtos"} 
+                showBackButton 
+                onBackClick={selectedCategory ? handleBackToCategories : goToHome} 
+            />
+            <main className="flex-1 overflow-y-auto p-6 lg:p-10">
+                {selectedCategory ? renderModelsView() : renderCategoryView()}
             </main>
         </>
     );
@@ -782,6 +788,8 @@ const GlobalChatPage: React.FC<{ user: User; goToHome: () => void; }> = ({ user,
 // OrderPage component with a complete form
 const OrderPage: React.FC<{ goToHome: () => void; user: User; initialOrder: Order | null }> = ({ goToHome, user, initialOrder }) => {
   const [isSaving, setIsSaving] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [formData, setFormData] = useState({
     PEDIDO_NUMERO: initialOrder?.PEDIDO_NUMERO || '',
     PEDIDO_DATA: initialOrder?.PEDIDO_DATA || new Date().toISOString().split('T')[0],
@@ -827,8 +835,8 @@ const OrderPage: React.FC<{ goToHome: () => void; user: User; initialOrder: Orde
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  
+  const handleSaveOrder = async (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
 
     if (!isViewMode && (formData.PEDIDO_NUMERO === 'Carregando...' || formData.PEDIDO_NUMERO === 'ERRO!')) {
@@ -838,23 +846,32 @@ const OrderPage: React.FC<{ goToHome: () => void; user: User; initialOrder: Orde
 
     setIsSaving(true);
     
+    try {
+        if (!user.email) throw new Error("Usuário sem e-mail.");
+        await saveOrder(user.uid, user.email, formData);
+        setIsSaved(true);
+        // We no longer alert here, the UI state change is enough feedback
+    } catch (error) {
+        console.error("Falha ao salvar o pedido:", error);
+        alert("Ocorreu um erro ao salvar o pedido. Verifique o console para mais detalhes.");
+    } finally {
+        setIsSaving(false);
+    }
+  };
+
+  const handleGeneratePdf = async (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    setIsGeneratingPdf(true);
     const formElementId = 'order-form-container';
     const fileName = `Pedido-${formData.PEDIDO_NUMERO || 'Novo'}`;
 
     try {
-        if (!isViewMode) {
-             if (!user.email) throw new Error("Usuário sem e-mail.");
-             await saveOrder(user.uid, user.email, formData);
-        }
         await generateOrderPdf(formElementId, fileName);
-        if (!isViewMode) {
-            alert("Pedido salvo e PDF gerado com sucesso!");
-        }
     } catch (error) {
-        console.error("Falha ao processar o pedido:", error);
-        alert("Ocorreu um erro. Verifique o console para mais detalhes.");
+        console.error("Falha ao gerar o PDF:", error);
+        // Alert is handled within the service
     } finally {
-        setIsSaving(false);
+        setIsGeneratingPdf(false);
     }
   };
 
@@ -865,7 +882,7 @@ const OrderPage: React.FC<{ goToHome: () => void; user: User; initialOrder: Orde
     <>
       <AppHeader title={isViewMode ? "Detalhes do Pedido" : "Gerar Pedido"} showBackButton onBackClick={goToHome} />
       <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-10">
-        <form onSubmit={handleSubmit} id="order-form-container" className="max-w-4xl mx-auto space-y-6 mb-24 p-6 sm:p-8 bg-surface-light dark:bg-surface-dark shadow-card rounded-2xl border border-border-color dark:border-border-dark">
+        <div id="order-form-container" className="max-w-4xl mx-auto space-y-6 mb-24 p-6 sm:p-8 bg-surface-light dark:bg-surface-dark shadow-card rounded-2xl border border-border-color dark:border-border-dark">
             
             <div className="flex flex-col sm:flex-row justify-between items-start gap-6 border-b border-border-color dark:border-border-dark pb-6 mb-6">
                 <div className="text-left text-xs leading-normal text-text-subtle dark:text-text-secondary-dark space-y-1">
@@ -965,12 +982,27 @@ const OrderPage: React.FC<{ goToHome: () => void; user: User; initialOrder: Orde
             </section>
 
 
-            <div className="pt-6 flex justify-end">
-                <button type="submit" disabled={isSaving} className="w-full sm:w-auto h-11 flex justify-center items-center px-8 border border-transparent rounded-lg text-sm font-medium text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-surface-light dark:focus:ring-offset-surface-dark focus:ring-primary disabled:bg-gray-400 dark:disabled:bg-gray-600">
-                    {isSaving ? 'Processando...' : (isViewMode ? 'Baixar PDF Novamente' : 'Salvar e Gerar PDF')}
+            <div className="pt-6 flex flex-col sm:flex-row justify-end gap-3">
+                {!isViewMode && (
+                    <button
+                        type="button"
+                        onClick={handleSaveOrder}
+                        disabled={isSaving || isSaved}
+                        className="w-full sm:w-auto h-11 flex justify-center items-center px-8 border border-primary text-primary dark:text-primary-light dark:border-primary-light/50 rounded-lg text-sm font-medium hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-surface-light dark:focus:ring-offset-surface-dark focus:ring-primary disabled:bg-gray-200 dark:disabled:bg-gray-700 disabled:text-gray-500 disabled:border-gray-300 dark:disabled:border-gray-600 disabled:cursor-not-allowed"
+                    >
+                        {isSaving ? 'Salvando...' : (isSaved ? 'Salvo com Sucesso!' : 'Salvar Pedido')}
+                    </button>
+                )}
+                <button
+                    type="button"
+                    onClick={handleGeneratePdf}
+                    disabled={isGeneratingPdf || (!isViewMode && !isSaved)}
+                    className="w-full sm:w-auto h-11 flex justify-center items-center px-8 border border-transparent rounded-lg text-sm font-medium text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-surface-light dark:focus:ring-offset-surface-dark focus:ring-primary disabled:bg-gray-400 dark:disabled:bg-gray-600"
+                >
+                    {isGeneratingPdf ? 'Gerando PDF...' : (isViewMode ? 'Baixar PDF' : 'Gerar PDF')}
                 </button>
             </div>
-        </form>
+        </div>
       </main>
     </>
   );
