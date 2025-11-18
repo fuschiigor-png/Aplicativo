@@ -788,10 +788,117 @@ const GlobalChatPage: React.FC<{ user: User; goToHome: () => void; }> = ({ user,
     );
 };
 
+// MyOrdersPage: Lists saved orders for the user
+const MyOrdersPage: React.FC<{ goToHome: () => void; user: User; onSelectOrder: (order: Order) => void; }> = ({ goToHome, user, onSelectOrder }) => {
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const unsubscribe = getOrdersListener(user.uid, (fetchedOrders) => {
+        setOrders(fetchedOrders);
+        setIsLoading(false);
+    });
+    return () => unsubscribe();
+  }, [user.uid]);
+
+  const handleDelete = async (orderId: string, e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (window.confirm("Tem certeza que deseja excluir este pedido?")) {
+          try {
+              await deleteOrder(orderId);
+          } catch (error) {
+              console.error("Error deleting order:", error);
+              alert("Erro ao excluir pedido.");
+          }
+      }
+  };
+
+    const handleDeleteAll = async () => {
+        if (window.confirm("ATENÇÃO: Isso excluirá TODOS os seus pedidos e reiniciará o contador. Deseja continuar?")) {
+             try {
+                 await deleteAllOrdersAndResetCounter(user.uid);
+             } catch (error) {
+                 console.error("Error deleting all orders:", error);
+                 alert("Erro ao excluir todos os pedidos.");
+             }
+        }
+    }
+
+  return (
+    <>
+      <AppHeader title="Meus Pedidos" showBackButton onBackClick={goToHome} />
+      <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-10">
+         <div className="max-w-5xl mx-auto">
+            <div className="flex justify-end mb-6">
+                {orders.length > 0 && (
+                    <button 
+                        onClick={handleDeleteAll}
+                        className="text-error hover:bg-error/10 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 border border-transparent hover:border-error/20"
+                    >
+                        <TrashIcon className="w-4 h-4" />
+                        Limpar Histórico
+                    </button>
+                )}
+            </div>
+
+            {isLoading ? (
+                 <div className="text-center text-text-secondary dark:text-text-secondary-dark py-10">Carregando pedidos...</div>
+            ) : orders.length === 0 ? (
+                <div className="text-center py-16 bg-surface-light dark:bg-surface-dark rounded-xl border border-border-color dark:border-border-dark">
+                    <div className="flex justify-center mb-4">
+                        <CartIcon className="w-16 h-16 text-text-subtle dark:text-text-secondary-dark opacity-50" />
+                    </div>
+                    <h3 className="text-xl font-bold text-text-primary dark:text-text-primary-dark">Nenhum pedido encontrado</h3>
+                    <p className="text-text-secondary dark:text-text-secondary-dark mt-2">Seus pedidos salvos aparecerão aqui.</p>
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {orders.map(order => (
+                        <div 
+                            key={order.id}
+                            onClick={() => onSelectOrder(order)}
+                            className="bg-surface-light dark:bg-surface-dark p-5 rounded-xl border border-border-color dark:border-border-dark hover:shadow-card-hover hover:border-primary cursor-pointer transition-all group relative"
+                        >
+                             <div className="flex justify-between items-start mb-3">
+                                 <div>
+                                     <span className="text-xs font-bold bg-primary/10 text-primary px-2 py-1 rounded">#{order.PEDIDO_NUMERO}</span>
+                                     <p className="text-xs text-text-subtle dark:text-text-secondary-dark mt-2">
+                                        {order.PEDIDO_DATA ? new Date(order.PEDIDO_DATA).toLocaleDateString('pt-BR', {timeZone: 'UTC'}) : '-'}
+                                     </p>
+                                 </div>
+                                 <button
+                                    onClick={(e) => handleDelete(order.id, e)}
+                                    className="text-text-subtle dark:text-text-secondary-dark hover:text-error p-1 rounded-full hover:bg-surface-container dark:hover:bg-surface-container-dark transition-colors z-10"
+                                    title="Excluir"
+                                 >
+                                     <TrashIcon className="w-5 h-5" />
+                                 </button>
+                             </div>
+                             
+                             <h4 className="font-bold text-text-primary dark:text-text-primary-dark truncate mb-1" title={order.CLIENTE_RAZAO_SOCIAL}>{order.CLIENTE_RAZAO_SOCIAL || 'Cliente Sem Nome'}</h4>
+                             <p className="text-sm text-text-secondary dark:text-text-secondary-dark line-clamp-2 min-h-[2.5em]" title={order.PRODUTO_DESCRICAO}>
+                                 {order.PRODUTO_DESCRICAO || 'Sem descrição'}
+                             </p>
+                             
+                             <div className="mt-4 pt-3 border-t border-border-color dark:border-border-dark flex justify-between items-center">
+                                 <span className="text-xs text-text-subtle dark:text-text-secondary-dark">Total</span>
+                                 <span className="font-bold text-primary">{order.PEDIDO_VALOR_TOTAL || 'R$ 0,00'}</span>
+                             </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+         </div>
+      </main>
+    </>
+  );
+};
+
 // OrderPage component with a complete form
 const OrderPage: React.FC<{ goToHome: () => void; user: User; initialOrder: Order | null }> = ({ goToHome, user, initialOrder }) => {
   const [isSaving, setIsSaving] = useState(false);
-  const [isSaved, setIsSaved] = useState(false);
+  // State to control view/edit mode, initialized based on whether an order was passed in
+  const [isViewMode, setIsViewMode] = useState(!!initialOrder);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [formData, setFormData] = useState({
     PEDIDO_NUMERO: initialOrder?.PEDIDO_NUMERO || '',
@@ -816,10 +923,9 @@ const OrderPage: React.FC<{ goToHome: () => void; user: User; initialOrder: Orde
     OBSERVACAO_GERAL: initialOrder?.OBSERVACAO_GERAL || ''
   });
 
-  const isViewMode = !!initialOrder || isSaved;
-
   useEffect(() => {
-    if (!isViewMode && !isSaved) {
+    // Only fetch order number if we are creating a NEW order (no initialOrder passed)
+    if (!initialOrder) {
       setFormData(prev => ({ ...prev, PEDIDO_NUMERO: 'Carregando...' }));
       const fetchOrderNumber = async () => {
         try {
@@ -833,7 +939,7 @@ const OrderPage: React.FC<{ goToHome: () => void; user: User; initialOrder: Orde
       };
       fetchOrderNumber();
     }
-  }, []); // Run once on mount if not view mode
+  }, [initialOrder]); 
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -843,7 +949,7 @@ const OrderPage: React.FC<{ goToHome: () => void; user: User; initialOrder: Orde
   const handleSaveOrder = async (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
 
-    if (!isViewMode && (formData.PEDIDO_NUMERO === 'Carregando...' || formData.PEDIDO_NUMERO === 'ERRO!')) {
+    if (!initialOrder && (formData.PEDIDO_NUMERO === 'Carregando...' || formData.PEDIDO_NUMERO === 'ERRO!')) {
         alert("Aguarde o número do pedido ser gerado ou recarregue a página se houver um erro.");
         return;
     }
@@ -853,8 +959,7 @@ const OrderPage: React.FC<{ goToHome: () => void; user: User; initialOrder: Orde
     try {
         if (!user.email) throw new Error("Usuário sem e-mail.");
         await saveOrder(user.uid, user.email, formData);
-        setIsSaved(true);
-        // We no longer alert here, the UI state change is enough feedback
+        setIsViewMode(true); // Switch to view mode after saving
     } catch (error) {
         console.error("Falha ao salvar o pedido:", error);
         alert("Ocorreu um erro ao salvar o pedido. Verifique o console para mais detalhes.");
@@ -864,7 +969,7 @@ const OrderPage: React.FC<{ goToHome: () => void; user: User; initialOrder: Orde
   };
 
   const handleEditOrder = () => {
-      setIsSaved(false);
+      setIsViewMode(false); // Switch to edit mode
   }
 
   const handleGeneratePdf = async (e: React.MouseEvent<HTMLButtonElement>) => {
@@ -877,7 +982,6 @@ const OrderPage: React.FC<{ goToHome: () => void; user: User; initialOrder: Orde
         await generateOrderPdf(formElementId, fileName);
     } catch (error) {
         console.error("Falha ao gerar o PDF:", error);
-        // Alert is handled within the service
     } finally {
         setIsGeneratingPdf(false);
     }
@@ -893,7 +997,7 @@ const OrderPage: React.FC<{ goToHome: () => void; user: User; initialOrder: Orde
       return (
         <div className={className}>
            <span className={labelClass}>{label}</span>
-           <div className="text-sm font-medium text-gray-900 min-h-[1.5rem] border-b border-transparent py-1">
+           <div className="text-sm font-medium text-gray-900 min-h-[1.5rem] border-b border-transparent py-2">
               {formData[name] || '-'}
            </div>
         </div>
@@ -1038,7 +1142,7 @@ const OrderPage: React.FC<{ goToHome: () => void; user: User; initialOrder: Orde
                     <div className="h-px bg-gray-300 flex-1"></div>
                 </div>
 
-                <div className={`grid grid-cols-12 gap-4 p-4 border border-gray-100 rounded ${isViewMode ? 'bg-transparent border-none p-0' : 'bg-white'}`}>
+                <div className={`grid grid-cols-12 gap-x-6 gap-y-5 p-6 border border-gray-200 rounded-lg ${isViewMode ? 'bg-transparent' : 'bg-white'}`}>
                     {renderField("Razão Social / Nome", "CLIENTE_RAZAO_SOCIAL", "text", undefined, "col-span-12 md:col-span-8")}
                     {renderField("A/C (Contato)", "CLIENTE_CONTATO_AC", "text", undefined, "col-span-12 md:col-span-4")}
                     {renderField("CNPJ / CPF", "CLIENTE_CNPJ", "text", 18, "col-span-12 md:col-span-4")}
@@ -1047,10 +1151,10 @@ const OrderPage: React.FC<{ goToHome: () => void; user: User; initialOrder: Orde
                     {renderField("E-mail de Contato", "CLIENTE_EMAIL", "email", undefined, "col-span-12 md:col-span-6")}
                     {renderField("Transportadora Preferencial", "TRANSPORTADORA", "text", undefined, "col-span-12 md:col-span-6")}
                     {renderField("Endereço Completo", "CLIENTE_ENDERECO", "text", undefined, "col-span-12")}
-                    {renderField("Bairro", "CLIENTE_BAIRRO", "text", undefined, "col-span-12 md:col-span-5")}
-                    {renderField("Cidade", "CLIENTE_CIDADE", "text", undefined, "col-span-12 md:col-span-4")}
-                    {renderField("Estado", "CLIENTE_UF", "text", 2, "col-span-12 md:col-span-2")}
-                    {renderField("CEP", "CLIENTE_CEP", "text", 9, "col-span-12 md:col-span-1")}
+                    {renderField("Bairro", "CLIENTE_BAIRRO", "text", undefined, "col-span-12 md:col-span-4")}
+                    {renderField("Cidade", "CLIENTE_CIDADE", "text", undefined, "col-span-12 md:col-span-3")}
+                    {renderField("UF", "CLIENTE_UF", "text", 2, "col-span-12 md:col-span-1")}
+                    {renderField("CEP", "CLIENTE_CEP", "text", 9, "col-span-12 md:col-span-4")}
                 </div>
             </section>
 
@@ -1083,7 +1187,7 @@ const OrderPage: React.FC<{ goToHome: () => void; user: User; initialOrder: Orde
                 
                 <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                         {renderTextarea("Observações Gerais", "OBSERVACAO_GERAL", "Instruções de entrega, voltagem, etc.", "h-24")}
+                         {renderTextarea("Detalhamento da Negociação", "OBSERVACAO_GERAL", "Instruções de entrega, condições de pagamento, etc.", "h-24")}
                     </div>
                     <div className="flex flex-col justify-end items-end">
                         <div className="bg-primary/5 p-6 rounded-lg border border-primary/20 w-full md:w-auto min-w-[250px]">
@@ -1099,14 +1203,9 @@ const OrderPage: React.FC<{ goToHome: () => void; user: User; initialOrder: Orde
             </section>
 
             {/* Rodapé com Assinaturas */}
-            <section className="mt-16 pt-8 border-t border-gray-200">
-                <div className="grid grid-cols-2 gap-12">
-                    <div className="text-center">
-                        <div className="border-b border-gray-400 mb-2 h-8"></div>
-                        <p className="text-xs font-bold uppercase text-gray-600">Barudan do Brasil</p>
-                        <p className="text-xs text-gray-400">{formData.VENDEDOR_NOME}</p>
-                    </div>
-                    <div className="text-center">
+            <section className="mt-20 pt-8 border-t border-gray-200">
+                <div className="flex justify-center">
+                    <div className="text-center w-2/3 max-w-md">
                         <div className="border-b border-gray-400 mb-2 h-8"></div>
                         <p className="text-xs font-bold uppercase text-gray-600">Cliente / Responsável</p>
                         <p className="text-xs text-gray-400">{formData.CLIENTE_RAZAO_SOCIAL}</p>
@@ -1120,105 +1219,6 @@ const OrderPage: React.FC<{ goToHome: () => void; user: User; initialOrder: Orde
         </div>
       </main>
     </>
-  );
-};
-
-// MyOrdersPage: Displays a list of saved orders for the user
-const MyOrdersPage: React.FC<{ goToHome: () => void; user: User; onSelectOrder: (order: Order) => void; }> = ({ goToHome, user, onSelectOrder }) => {
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    if (!user) return;
-    const unsubscribe = getOrdersListener(user.uid, (fetchedOrders) => {
-        setOrders(fetchedOrders);
-        setIsLoading(false);
-    });
-    return () => unsubscribe();
-  }, [user]);
-
-  const handleDelete = async (orderId: string, e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent triggering onSelectOrder
-    if (window.confirm("Tem certeza que deseja excluir este pedido?")) {
-        try {
-            await deleteOrder(orderId);
-        } catch (error) {
-            console.error(error);
-            alert("Erro ao excluir pedido.");
-        }
-    }
-  };
-
-  const handleDeleteAll = async () => {
-      if (window.confirm("ATENÇÃO: Isso apagará TODOS os seus pedidos e resetará a contagem. Deseja continuar?")) {
-          try {
-              await deleteAllOrdersAndResetCounter(user.uid);
-          } catch (error) {
-              console.error(error);
-              alert("Erro ao resetar pedidos.");
-          }
-      }
-  }
-
-  return (
-      <>
-        <AppHeader title="Histórico de Pedidos" showBackButton onBackClick={goToHome} />
-        <main className="flex-1 overflow-y-auto p-6 lg:p-10">
-            <div className="max-w-5xl mx-auto space-y-6">
-                <div className="flex justify-between items-center">
-                    <h2 className="text-xl font-bold text-text-primary dark:text-text-primary-dark">Seus Pedidos Salvos</h2>
-                    {orders.length > 0 && (
-                         <button
-                            onClick={handleDeleteAll}
-                            className="flex items-center gap-2 text-error hover:text-red-700 px-3 py-1 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-sm font-medium"
-                        >
-                            <TrashIcon className="w-4 h-4" />
-                            Resetar Tudo
-                        </button>
-                    )}
-                </div>
-
-                {isLoading ? (
-                    <p className="text-center text-text-secondary dark:text-text-secondary-dark">Carregando...</p>
-                ) : orders.length === 0 ? (
-                    <div className="text-center py-12 bg-surface-light dark:bg-surface-dark rounded-xl border border-border-color dark:border-border-dark">
-                        <CartIcon className="w-12 h-12 mx-auto text-text-subtle dark:text-text-secondary-dark mb-3 opacity-50" />
-                        <p className="text-text-secondary dark:text-text-secondary-dark">Nenhum pedido encontrado.</p>
-                    </div>
-                ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {orders.map(order => (
-                            <div
-                                key={order.id}
-                                onClick={() => onSelectOrder(order)}
-                                className="bg-surface-light dark:bg-surface-dark p-5 rounded-xl border border-border-color dark:border-border-dark shadow-sm hover:shadow-md cursor-pointer transition-all group relative"
-                            >
-                                <div className="flex justify-between items-start">
-                                    <div>
-                                        <span className="inline-block bg-primary/10 text-primary text-xs font-bold px-2 py-1 rounded mb-2">#{order.PEDIDO_NUMERO}</span>
-                                        <h3 className="font-bold text-text-primary dark:text-text-primary-dark truncate">{order.CLIENTE_RAZAO_SOCIAL || "Cliente sem nome"}</h3>
-                                        <p className="text-sm text-text-secondary dark:text-text-secondary-dark mt-1">
-                                            {order.PEDIDO_DATA ? new Date(order.PEDIDO_DATA).toLocaleDateString('pt-BR', {timeZone: 'UTC'}) : 'Sem data'}
-                                        </p>
-                                    </div>
-                                    <div className="text-right">
-                                        <p className="font-bold text-primary">{order.PEDIDO_VALOR_TOTAL || "R$ 0,00"}</p>
-                                    </div>
-                                </div>
-                                <button
-                                    onClick={(e) => handleDelete(order.id, e)}
-                                    className="absolute top-4 right-4 p-2 text-gray-400 hover:text-error rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 opacity-0 group-hover:opacity-100 transition-opacity"
-                                    title="Excluir"
-                                >
-                                    <TrashIcon className="w-5 h-5" />
-                                </button>
-                            </div>
-                        ))}
-                    </div>
-                )}
-            </div>
-        </main>
-      </>
   );
 };
 
