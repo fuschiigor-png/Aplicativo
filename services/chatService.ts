@@ -13,6 +13,7 @@ import {
     deleteDoc,
     getDocs,
     writeBatch,
+    updateDoc,
 } from "firebase/firestore";
 import { db } from "./firebase";
 import { GlobalChatMessage, ExchangeRateHistoryEntry, Order } from "../types";
@@ -193,19 +194,36 @@ export const deleteOrder = async (orderId: string): Promise<void> => {
     }
 };
 
+// Update an existing order
+export const updateOrder = async (
+    orderId: string,
+    orderData: Partial<Order>
+): Promise<void> => {
+    try {
+        const orderDocRef = doc(db, ORDERS_COLLECTION, orderId);
+        await updateDoc(orderDocRef, {
+            ...orderData,
+        });
+    } catch (error) {
+        console.error("Error updating order:", error);
+        throw error;
+    }
+};
+
 // Save a new order to the database
 export const saveOrder = async (
     userId: string,
     userEmail: string,
     orderData: Omit<Order, 'id' | 'userId' | 'userEmail' | 'createdAt'>
-): Promise<void> => {
+): Promise<string> => {
     try {
-        await addDoc(collection(db, ORDERS_COLLECTION), {
+        const docRef = await addDoc(collection(db, ORDERS_COLLECTION), {
             ...orderData,
             userId,
             userEmail,
             createdAt: serverTimestamp(),
         });
+        return docRef.id;
     } catch (error) {
         console.error("Error saving order:", error);
         throw error;

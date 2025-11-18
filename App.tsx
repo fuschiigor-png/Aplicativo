@@ -8,7 +8,7 @@ import ChatInput from './components/ChatInput';
 import ChatMessage from './components/ChatMessage';
 import GlobalChatMessage from './components/GlobalChatMessage';
 import { generateChatResponse, getExchangeRate, resetChatSession } from './services/geminiService';
-import { getMessagesListener, sendGlobalMessage, getExchangeRateConfigListener, getExchangeRateHistoryListener, updateExchangeRateConfig, saveOrder, getOrdersListener, deleteOrder, getNextOrderNumber, deleteAllOrdersAndResetCounter } from './services/chatService';
+import { getMessagesListener, sendGlobalMessage, getExchangeRateConfigListener, getExchangeRateHistoryListener, updateExchangeRateConfig, saveOrder, updateOrder, getOrdersListener, deleteOrder, getNextOrderNumber, deleteAllOrdersAndResetCounter } from './services/chatService';
 import { BarudexIcon, MoonIcon, SunIcon, ModelsIcon, GlobalChatIcon, ExchangeRateIcon, LogoutIcon, DocumentIcon, HistoryIcon, TrashIcon, CartIcon, BookIcon, CurrencyIcon } from './components/Icons';
 import { generateOrderPdf } from './services/pdfService';
 
@@ -113,7 +113,8 @@ const MainDashboard: React.FC<{ user: User; theme: Theme; toggleTheme: () => voi
       {view === 'chat' && <ChatPage goToHome={goToHome} />}
       {view === 'global-chat' && <GlobalChatPage user={user} goToHome={goToHome} />}
       {view === 'exchange-rate' && <ExchangeRatePage goToHome={goToHome} savedReferenceRate={referenceRate} history={exchangeRateHistory} onUpdateReferenceRate={handleUpdateReferenceRate} />}
-      {view === 'order' && <OrderPage goToHome={goToHome} user={user} initialOrder={selectedOrder} />}
+      {/* Key prop added to force re-mounting when the selected order changes, ensuring state resets properly */}
+      {view === 'order' && <OrderPage key={selectedOrder ? selectedOrder.id : 'new-order'} goToHome={goToHome} user={user} initialOrder={selectedOrder} />}
       {view === 'my-orders' && <MyOrdersPage goToHome={goToHome} user={user} onSelectOrder={handleSelectOrder} />}
       
       {/* Floating Action Buttons Container */}
@@ -803,6 +804,7 @@ const MyOrdersPage: React.FC<{ goToHome: () => void; user: User; onSelectOrder: 
 
   const handleDelete = async (orderId: string, e: React.MouseEvent) => {
       e.stopPropagation();
+      e.nativeEvent.stopImmediatePropagation();
       if (window.confirm("Tem certeza que deseja excluir este pedido?")) {
           try {
               await deleteOrder(orderId);
@@ -868,7 +870,7 @@ const MyOrdersPage: React.FC<{ goToHome: () => void; user: User; onSelectOrder: 
                                  </div>
                                  <button
                                     onClick={(e) => handleDelete(order.id, e)}
-                                    className="text-text-subtle dark:text-text-secondary-dark hover:text-error p-1 rounded-full hover:bg-surface-container dark:hover:bg-surface-container-dark transition-colors z-10"
+                                    className="text-text-subtle dark:text-text-secondary-dark hover:text-error p-2 rounded-full hover:bg-surface-container dark:hover:bg-surface-container-dark transition-colors z-30 relative -mr-2 -mt-2"
                                     title="Excluir"
                                  >
                                      <TrashIcon className="w-5 h-5" />
@@ -900,6 +902,9 @@ const OrderPage: React.FC<{ goToHome: () => void; user: User; initialOrder: Orde
   // State to control view/edit mode, initialized based on whether an order was passed in
   const [isViewMode, setIsViewMode] = useState(!!initialOrder);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  // Keep track of the current order ID (either from initial prop or after first save)
+  const [currentOrderId, setCurrentOrderId] = useState<string | null>(initialOrder?.id || null);
+
   const [formData, setFormData] = useState({
     PEDIDO_NUMERO: initialOrder?.PEDIDO_NUMERO || '',
     PEDIDO_DATA: initialOrder?.PEDIDO_DATA || new Date().toISOString().split('T')[0],
@@ -958,7 +963,16 @@ const OrderPage: React.FC<{ goToHome: () => void; user: User; initialOrder: Orde
     
     try {
         if (!user.email) throw new Error("Usuário sem e-mail.");
-        await saveOrder(user.uid, user.email, formData);
+        
+        if (currentOrderId) {
+            // If we have an ID, update existing order
+            await updateOrder(currentOrderId, formData);
+        } else {
+            // Create new order and get its ID
+            const newId = await saveOrder(user.uid, user.email, formData);
+            setCurrentOrderId(newId);
+        }
+        
         setIsViewMode(true); // Switch to view mode after saving
     } catch (error) {
         console.error("Falha ao salvar o pedido:", error);
@@ -970,6 +984,31 @@ const OrderPage: React.FC<{ goToHome: () => void; user: User; initialOrder: Orde
 
   const handleEditOrder = () => {
       setIsViewMode(false); // Switch to edit mode
+  }
+
+  const handleCancelEdit = () => {
+      if (currentOrderId) {
+          // Se já existe um pedido salvo, volta para o modo de visualização (sem salvar alterações)
+          setIsViewMode(true);
+          // Opcional: Recarregar dados originais aqui se necessário, mas por enquanto mantém o estado atual do form
+      } else {
+          // Se é um pedido novo não salvo, volta para a home
+          goToHome();
+      }
+  }
+
+  const handleDeleteOrder = async () => {
+    if (!currentOrderId) return;
+    
+    if (window.confirm("Tem certeza que deseja excluir este pedido permanentemente?")) {
+        try {
+            await deleteOrder(currentOrderId);
+            goToHome(); // Redirect to home after deletion
+        } catch (error) {
+             console.error("Falha ao excluir o pedido:", error);
+             alert("Ocorreu um erro ao excluir o pedido.");
+        }
+    }
   }
 
   const handleGeneratePdf = async (e: React.MouseEvent<HTMLButtonElement>) => {
@@ -1036,34 +1075,63 @@ const OrderPage: React.FC<{ goToHome: () => void; user: User; initialOrder: Orde
       <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-10 bg-gray-100 dark:bg-background-dark">
         
         {/* Botões de Ação fora do container do PDF */}
-        <div className="max-w-5xl mx-auto mb-4 flex flex-col sm:flex-row justify-end gap-3">
-             {isViewMode ? (
-                 <button
-                    type="button"
-                    onClick={handleEditOrder}
-                    disabled={isGeneratingPdf}
-                    className="w-full sm:w-auto h-10 flex justify-center items-center px-6 bg-white dark:bg-surface-dark border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 focus:outline-none shadow-sm transition-all"
-                >
-                    Editar
-                </button>
-             ) : (
-                <button
-                    type="button"
-                    onClick={handleSaveOrder}
-                    disabled={isSaving}
-                    className="w-full sm:w-auto h-10 flex justify-center items-center px-6 bg-white dark:bg-surface-dark border border-primary text-primary rounded-lg text-sm font-medium hover:bg-primary/5 focus:outline-none shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                    {isSaving ? 'Salvando...' : 'Salvar Pedido'}
-                </button>
-            )}
-            <button
-                type="button"
-                onClick={handleGeneratePdf}
-                disabled={isGeneratingPdf || !isViewMode}
-                className="w-full sm:w-auto h-10 flex justify-center items-center px-6 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-dark shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-                {isGeneratingPdf ? 'Gerando PDF...' : 'Baixar PDF'}
-            </button>
+        <div className="max-w-5xl mx-auto mb-4 flex flex-col sm:flex-row justify-between gap-3">
+             {/* Lado Esquerdo: Ações Destrutivas */}
+             <div>
+                 {currentOrderId && (
+                    <button
+                        type="button"
+                        onClick={handleDeleteOrder}
+                        className="w-full sm:w-auto h-10 flex justify-center items-center px-6 bg-white dark:bg-surface-dark border border-error text-error rounded-lg text-sm font-medium hover:bg-error/5 focus:outline-none shadow-sm transition-all"
+                    >
+                        Excluir
+                    </button>
+                 )}
+             </div>
+
+             {/* Lado Direito: Ações Principais */}
+             <div className="flex flex-col sm:flex-row gap-3">
+                {isViewMode ? (
+                    <button
+                        type="button"
+                        onClick={handleEditOrder}
+                        disabled={isGeneratingPdf}
+                        className="w-full sm:w-auto h-10 flex justify-center items-center px-6 bg-white dark:bg-surface-dark border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 focus:outline-none shadow-sm transition-all"
+                    >
+                        Editar
+                    </button>
+                ) : (
+                    <>
+                        <button
+                            type="button"
+                            onClick={handleCancelEdit}
+                            className="w-full sm:w-auto h-10 flex justify-center items-center px-6 bg-transparent text-text-secondary dark:text-text-secondary-dark border border-transparent hover:bg-gray-200/50 dark:hover:bg-surface-dark rounded-lg text-sm font-medium focus:outline-none transition-all"
+                        >
+                            Cancelar
+                        </button>
+                        <button
+                            type="button"
+                            onClick={handleSaveOrder}
+                            disabled={isSaving}
+                            className="w-full sm:w-auto h-10 flex justify-center items-center px-6 bg-white dark:bg-surface-dark border border-primary text-primary rounded-lg text-sm font-medium hover:bg-primary/5 focus:outline-none shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            {isSaving ? 'Salvando...' : 'Salvar Pedido'}
+                        </button>
+                    </>
+                )}
+                
+                {/* Botão PDF visível apenas no modo de visualização */}
+                {isViewMode && (
+                    <button
+                        type="button"
+                        onClick={handleGeneratePdf}
+                        disabled={isGeneratingPdf}
+                        className="w-full sm:w-auto h-10 flex justify-center items-center px-6 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-dark shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        {isGeneratingPdf ? 'Gerando PDF...' : 'Baixar PDF'}
+                    </button>
+                )}
+            </div>
         </div>
 
         {/* Container do Formulário (Folha de Papel) */}
