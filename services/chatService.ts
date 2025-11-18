@@ -15,7 +15,7 @@ import {
     writeBatch,
     updateDoc,
 } from "firebase/firestore";
-import { db } from "./firebase";
+import { db, auth } from "./firebase";
 import { GlobalChatMessage, ExchangeRateHistoryEntry, Order } from "../types";
 
 const GLOBAL_CHAT_COLLECTION = 'global_chat';
@@ -188,12 +188,26 @@ export const deleteOrder = async (orderId: string): Promise<void> => {
     if (!orderId) {
         throw new Error("ID do pedido inválido.");
     }
+    
+    // Security check: Verify if user is authenticated
+    const user = auth.currentUser;
+    if (!user) {
+        throw new Error("Você precisa estar logado para excluir um pedido.");
+    }
+
     try {
         const orderDocRef = doc(db, ORDERS_COLLECTION, orderId);
         await deleteDoc(orderDocRef);
-    } catch (error) {
+    } catch (error: any) {
         console.error("Error deleting order:", error);
-        throw error;
+        
+        // Better error handling for permissions
+        if (error.code === 'permission-denied' || error.message?.includes('permission')) {
+             console.error("DICA: Verifique as regras de segurança no console do Firebase para a coleção 'orders'.");
+             throw new Error("Permissão negada. Verifique se você é o dono do pedido e se as regras do banco de dados permitem a exclusão.");
+        }
+        
+        throw new Error(error.message || "Falha desconhecida ao excluir pedido.");
     }
 };
 

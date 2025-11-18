@@ -270,7 +270,6 @@ const HomePage: React.FC<{ setView: (view: View) => void; onNewOrderClick: () =>
 
 // Data for machine models, organized by product type
 const machineData: Record<string, { name: string; type: string; price: string; description: string; jpyPrice?: number }[]> = {
-  // ... (data remains same, truncated for brevity in diff but included in full file)
   '01 Cabeça': [
     { 
       name: 'BEKT-S1501CA II', 
@@ -400,7 +399,7 @@ const machineData: Record<string, { name: string; type: string; price: string; d
       { name: 'Bastidor Magnético 15x15cm', type: 'Acessório', price: 'R$ 450,00', description: 'Facilita a fixação de tecidos difíceis.' },
   ]
 };
-// ... (rest of components: MachineModelsPage, ExchangeRatePage, ChatPage, GlobalChatPage remain unchanged)
+
 const productTypes = Object.keys(machineData);
 
 // MachineModelsPage: Displays product categories and then specific models
