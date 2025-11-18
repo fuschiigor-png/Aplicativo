@@ -1024,10 +1024,26 @@ const OrderPage: React.FC<{ goToHome: () => void; user: User; initialOrder: Orde
     e.preventDefault();
     setIsGeneratingPdf(true);
     const formElementId = 'order-form-container';
-    const fileName = `Pedido-${formData.PEDIDO_NUMERO || 'Novo'}`;
+    
+    // Formatar data para DD-MM-AAAA
+    let formattedDate = '';
+    if (formData.PEDIDO_DATA) {
+        const parts = formData.PEDIDO_DATA.split('-'); // Assume YYYY-MM-DD do input date
+        if (parts.length === 3) {
+            formattedDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
+        } else {
+            formattedDate = formData.PEDIDO_DATA;
+        }
+    }
+
+    // Construir nome do arquivo: Pedido [Data] [Cliente] [Cidade] [Vendedor] [Numero]
+    const rawFileName = `Pedido ${formattedDate} ${formData.CLIENTE_RAZAO_SOCIAL} ${formData.CLIENTE_CIDADE} ${formData.VENDEDOR_NOME} ${formData.PEDIDO_NUMERO}`;
+    
+    // Sanitizar nome do arquivo (remover caracteres inválidos para SOs)
+    const fileName = rawFileName.replace(/[<>:"/\\|?*]/g, '').replace(/\s+/g, ' ').trim();
 
     try {
-        await generateOrderPdf(formElementId, fileName);
+        await generateOrderPdf(formElementId, fileName || `Pedido-${formData.PEDIDO_NUMERO || 'Novo'}`);
     } catch (error) {
         console.error("Falha ao gerar o PDF:", error);
     } finally {
@@ -1044,9 +1060,9 @@ const OrderPage: React.FC<{ goToHome: () => void; user: User; initialOrder: Orde
     if (isViewMode) {
       return (
         <div className={className}>
-           <span className={labelClass}>{label}</span>
-           <div className="text-sm font-medium text-gray-900 min-h-[1.5rem] border-b border-transparent py-2">
-              {formData[name] || '-'}
+           <span className="block text-[10px] font-bold text-gray-400 uppercase mb-1 tracking-widest">{label}</span>
+           <div className="text-sm font-bold text-gray-900 min-h-[1.5rem] border-b border-gray-300 pb-1 flex items-end">
+              {formData[name] || ''}
            </div>
         </div>
       );
@@ -1062,9 +1078,9 @@ const OrderPage: React.FC<{ goToHome: () => void; user: User; initialOrder: Orde
   const renderTextarea = (label: string, name: keyof typeof formData, placeholder: string, heightClass: string = "h-24") => {
      if (isViewMode) {
         return (
-            <div>
-                 {label && <span className={labelClass}>{label}</span>}
-                 <div className={`w-full text-sm font-medium text-gray-900 whitespace-pre-wrap border-transparent py-2 ${name === 'PRODUTO_DESCRICAO' ? 'min-h-[120px]' : 'min-h-[60px]'}`}>
+            <div className="h-full">
+                 {label && <span className="block text-[10px] font-bold text-gray-400 uppercase mb-2 tracking-widest">{label}</span>}
+                 <div className={`w-full text-sm font-medium text-gray-900 whitespace-pre-wrap border border-gray-200 rounded-lg p-4 bg-gray-50/50 ${name === 'PRODUTO_DESCRICAO' ? 'min-h-[160px]' : 'min-h-[100px]'}`}>
                     {formData[name] || '-'}
                  </div>
             </div>
@@ -1144,37 +1160,37 @@ const OrderPage: React.FC<{ goToHome: () => void; user: User; initialOrder: Orde
         </div>
 
         {/* Container do Formulário (Folha de Papel) */}
-        <div id="order-form-container" className="max-w-5xl mx-auto bg-white shadow-lg rounded-sm p-8 md:p-12 border border-gray-200 text-gray-900 relative">
+        <div id="order-form-container" className="max-w-5xl mx-auto bg-white shadow-lg rounded-sm p-10 md:p-12 border border-gray-200 text-gray-900 relative">
             
             {/* Cabeçalho do Documento */}
-            <div className="flex flex-col md:flex-row justify-between items-start border-b-4 border-primary pb-6 mb-6 gap-6">
-                <div className="space-y-1">
-                    <h1 className="text-3xl font-extrabold text-primary tracking-tight">Barudan do Brasil</h1>
-                    <p className="text-sm text-gray-500 font-medium">Comércio e Indústria Ltda.</p>
-                    <div className="text-xs text-gray-400 leading-relaxed mt-2 max-w-sm">
-                        <p>Av. Gomes Freire, 574 - Centro, Rio de Janeiro - RJ</p>
-                        <p>CEP: 20231-015 | Tel.: (21) 2506-0050</p>
-                        <p>CNPJ: 40.375.636/0001-32 | I.E.: 84.369.381</p>
+            <div className="flex flex-col md:flex-row justify-between items-start border-b-4 border-primary pb-6 mb-8 gap-6">
+                <div className="space-y-2">
+                    <h1 className="text-4xl font-extrabold text-primary tracking-tight">Barudan do Brasil</h1>
+                    <p className="text-sm text-gray-600 font-bold uppercase tracking-wider">Comércio e Indústria Ltda.</p>
+                    <div className="text-xs text-gray-500 leading-relaxed mt-3 max-w-md font-medium">
+                        <p className="mb-1">Av. Gomes Freire, 574 - Centro, Rio de Janeiro - RJ</p>
+                        <p className="mb-1">CEP: 20231-015 | Tel.: (21) 2506-0050</p>
+                        <p className="mb-1">CNPJ: 40.375.636/0001-32 | I.E.: 84.369.381</p>
                         <p>www.barudan.com.br | sac@barudan.com.br</p>
                     </div>
                 </div>
                 
                 <div className="text-right">
-                    <h2 className="text-4xl font-black text-gray-200 uppercase tracking-widest">PEDIDO</h2>
-                    <div className="mt-2 inline-block bg-gray-100 px-4 py-2 rounded border border-gray-200">
-                         <span className="text-xs font-bold text-gray-500 uppercase block">NÚMERO</span>
-                         <span className="text-2xl font-mono font-bold text-gray-900">#{formData.PEDIDO_NUMERO}</span>
+                    <h2 className="text-5xl font-black text-gray-100 uppercase tracking-widest">PEDIDO</h2>
+                    <div className="mt-3 inline-block bg-gray-50 px-6 py-3 rounded border border-gray-200 shadow-sm">
+                         <span className="text-[10px] font-bold text-gray-400 uppercase block tracking-widest mb-1">NÚMERO</span>
+                         <span className="text-3xl font-mono font-bold text-gray-800">#{formData.PEDIDO_NUMERO}</span>
                     </div>
                 </div>
             </div>
 
             {/* Barra de Informações Gerais */}
-            <div className="bg-gray-50 border-y border-gray-200 p-4 mb-8 grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="bg-gray-50 border-y border-gray-200 p-5 mb-8 grid grid-cols-1 md:grid-cols-4 gap-6">
                 <div>
                      {isViewMode ? (
                         <div>
                              <span className={labelClass}>Data de Emissão</span>
-                             <p className="font-medium text-gray-900">{formData.PEDIDO_DATA ? new Date(formData.PEDIDO_DATA).toLocaleDateString('pt-BR', {timeZone: 'UTC'}) : '-'}</p>
+                             <p className="font-bold text-gray-900 text-lg">{formData.PEDIDO_DATA ? new Date(formData.PEDIDO_DATA).toLocaleDateString('pt-BR', {timeZone: 'UTC'}) : '-'}</p>
                         </div>
                      ) : (
                         <>
@@ -1187,7 +1203,7 @@ const OrderPage: React.FC<{ goToHome: () => void; user: User; initialOrder: Orde
                     {isViewMode ? (
                         <div>
                             <span className={labelClass}>Vendedor Responsável</span>
-                            <p className="font-medium text-gray-900">{formData.VENDEDOR_NOME || '-'}</p>
+                            <p className="font-bold text-gray-900 text-lg">{formData.VENDEDOR_NOME || '-'}</p>
                         </div>
                     ) : (
                         <>
@@ -1200,7 +1216,7 @@ const OrderPage: React.FC<{ goToHome: () => void; user: User; initialOrder: Orde
                      {isViewMode ? (
                         <div>
                             <span className={labelClass}>Tipo de Venda</span>
-                            <p className="font-medium text-gray-900">{formData.TIPO_VENDA || '-'}</p>
+                            <p className="font-bold text-gray-900 text-lg">{formData.TIPO_VENDA || '-'}</p>
                         </div>
                     ) : (
                         <>
@@ -1213,13 +1229,13 @@ const OrderPage: React.FC<{ goToHome: () => void; user: User; initialOrder: Orde
 
             {/* Seção Cliente */}
             <section className="mb-8">
-                <div className="flex items-center mb-4">
-                    <div className="h-px bg-gray-300 flex-1"></div>
-                    <h3 className="px-4 text-primary font-bold uppercase tracking-wider text-sm">Dados do Cliente</h3>
-                    <div className="h-px bg-gray-300 flex-1"></div>
+                <div className="flex items-center mb-6">
+                    <div className="h-px bg-gray-200 flex-1"></div>
+                    <h3 className="px-4 text-primary font-bold uppercase tracking-widest text-xs">Dados do Cliente</h3>
+                    <div className="h-px bg-gray-200 flex-1"></div>
                 </div>
 
-                <div className={`grid grid-cols-12 gap-x-6 gap-y-5 p-6 border border-gray-200 rounded-lg ${isViewMode ? 'bg-transparent' : 'bg-white'}`}>
+                <div className={`grid grid-cols-12 gap-x-6 gap-y-6 p-6 border border-gray-200 rounded-lg ${isViewMode ? 'bg-transparent border-none p-0' : 'bg-white'}`}>
                     {renderField("Razão Social / Nome", "CLIENTE_RAZAO_SOCIAL", "text", undefined, "col-span-12 md:col-span-8")}
                     {renderField("A/C (Contato)", "CLIENTE_CONTATO_AC", "text", undefined, "col-span-12 md:col-span-4")}
                     {renderField("CNPJ / CPF", "CLIENTE_CNPJ", "text", 18, "col-span-12 md:col-span-4")}
@@ -1237,21 +1253,21 @@ const OrderPage: React.FC<{ goToHome: () => void; user: User; initialOrder: Orde
 
             {/* Seção Produtos e Valores */}
             <section className="mb-8">
-                <div className="flex items-center mb-4">
-                    <div className="h-px bg-gray-300 flex-1"></div>
-                    <h3 className="px-4 text-primary font-bold uppercase tracking-wider text-sm">Detalhamento do Pedido</h3>
-                    <div className="h-px bg-gray-300 flex-1"></div>
+                <div className="flex items-center mb-6">
+                    <div className="h-px bg-gray-200 flex-1"></div>
+                    <h3 className="px-4 text-primary font-bold uppercase tracking-widest text-xs">Detalhamento do Pedido</h3>
+                    <div className="h-px bg-gray-200 flex-1"></div>
                 </div>
 
                 <div className="border border-gray-200 rounded-lg overflow-hidden">
                     <div className="bg-gray-50 border-b border-gray-200 p-3 flex gap-4">
-                        <div className="w-24 text-xs font-bold text-gray-600 uppercase">QTD</div>
-                        <div className="flex-1 text-xs font-bold text-gray-600 uppercase">Descrição do Produto / Serviço</div>
+                        <div className="w-24 text-[10px] font-bold text-gray-500 uppercase text-center tracking-widest">QTD</div>
+                        <div className="flex-1 text-[10px] font-bold text-gray-500 uppercase tracking-widest">Descrição do Produto / Serviço</div>
                     </div>
-                    <div className="p-4 flex gap-4 bg-white items-start">
-                         <div className="w-24 text-center">
+                    <div className="p-4 flex gap-4 bg-white items-start min-h-[150px]">
+                         <div className="w-24 text-center pt-2">
                              {isViewMode ? (
-                                <span className="font-bold text-gray-900">{formData.PRODUTO_QUANTIDADE}</span>
+                                <span className="font-bold text-gray-900 text-xl">{formData.PRODUTO_QUANTIDADE}</span>
                              ) : (
                                 <input type="number" name="PRODUTO_QUANTIDADE" id="PRODUTO_QUANTIDADE" value={formData.PRODUTO_QUANTIDADE} onChange={handleInputChange} className={`${inputClass} text-center font-bold`} />
                              )}
@@ -1262,15 +1278,15 @@ const OrderPage: React.FC<{ goToHome: () => void; user: User; initialOrder: Orde
                     </div>
                 </div>
                 
-                <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-10">
                     <div>
-                         {renderTextarea("Detalhamento da Negociação", "OBSERVACAO_GERAL", "Instruções de entrega, condições de pagamento, etc.", "h-24")}
+                         {renderTextarea("Detalhamento da Negociação", "OBSERVACAO_GERAL", "Instruções de entrega, condições de pagamento, etc.", "h-32")}
                     </div>
                     <div className="flex flex-col justify-end items-end">
-                        <div className="bg-primary/5 p-6 rounded-lg border border-primary/20 w-full md:w-auto min-w-[250px]">
-                             <label htmlFor="PEDIDO_VALOR_TOTAL" className="block text-right text-xs font-bold text-primary uppercase mb-2">Valor Total do Pedido</label>
+                        <div className="bg-gray-50 p-8 rounded-lg border border-gray-200 w-full md:w-auto min-w-[320px] shadow-sm">
+                             <label htmlFor="PEDIDO_VALOR_TOTAL" className="block text-right text-[10px] font-bold text-gray-500 uppercase mb-2 tracking-widest">Valor Total do Pedido</label>
                              {isViewMode ? (
-                                <p className="text-3xl font-black text-right text-primary">{formData.PEDIDO_VALOR_TOTAL || 'R$ 0,00'}</p>
+                                <p className="text-4xl font-black text-right text-primary tracking-tight">{formData.PEDIDO_VALOR_TOTAL || 'R$ 0,00'}</p>
                              ) : (
                                 <input type="text" name="PEDIDO_VALOR_TOTAL" id="PEDIDO_VALOR_TOTAL" value={formData.PEDIDO_VALOR_TOTAL} onChange={handleInputChange} className="text-3xl font-black text-right bg-transparent border-none text-primary w-full focus:ring-0 p-0" placeholder="R$ 0,00" />
                              )}
@@ -1280,15 +1296,15 @@ const OrderPage: React.FC<{ goToHome: () => void; user: User; initialOrder: Orde
             </section>
 
             {/* Rodapé com Assinaturas */}
-            <section className="mt-20 pt-8 border-t border-gray-200">
+            <section className="mt-24 pt-10 border-t border-gray-200 break-inside-avoid">
                 <div className="flex justify-center">
                     <div className="text-center w-2/3 max-w-md">
-                        <div className="border-b border-gray-400 mb-2 h-8"></div>
-                        <p className="text-xs font-bold uppercase text-gray-600">Cliente / Responsável</p>
-                        <p className="text-xs text-gray-400">{formData.CLIENTE_RAZAO_SOCIAL}</p>
+                        <div className="border-b-2 border-gray-400 mb-3 h-8"></div>
+                        <p className="text-[10px] font-bold uppercase text-gray-500 mb-1 tracking-widest">Cliente / Responsável</p>
+                        <p className="text-sm font-bold text-gray-800">{formData.CLIENTE_RAZAO_SOCIAL}</p>
                     </div>
                 </div>
-                <div className="mt-8 text-center">
+                <div className="mt-12 text-center">
                     <p className="text-[10px] text-gray-400 italic">Este documento não possui valor fiscal até a emissão da nota fiscal correspondente.</p>
                 </div>
             </section>
